@@ -26,6 +26,7 @@ export const authController = {
     if (!match) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
+    console.log('JWT_SECRET en login:', process.env.JWT_SECRET);
 
     const token = jwt.sign(
       {
@@ -36,6 +37,7 @@ export const authController = {
       process.env.JWT_SECRET as string,
       { expiresIn: '3h' }
     );
+    console.log('JWT_SECRET en login:', process.env.JWT_SECRET);
 
     res.status(200).json({ token });
   } catch (error) {
