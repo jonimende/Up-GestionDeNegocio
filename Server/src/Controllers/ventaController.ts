@@ -23,9 +23,9 @@ export const ventasController = {
         cantidad,
         total,
         fecha,
-        celular,    // objeto con datos del celular o null
-        accesorio,  // objeto con datos del accesorio o null
-        reparacion, // objeto con datos de reparación o null
+        celular,    // puede ser null o {id, ...}
+        accesorioId,  // puede ser null o number
+        reparacionId, // puede ser null o number
       } = req.body;
 
       // Validación mínima
@@ -35,7 +35,8 @@ export const ventasController = {
 
       // Función auxiliar para crear o buscar el celular
       async function findOrCreateCelular(celularData: any) {
-        if (!celularData) return null;
+        if (!celularData || Object.keys(celularData).length === 0) return null;
+
         let cel = null;
         if (celularData.id) {
           cel = await Celular.findByPk(celularData.id);
@@ -46,35 +47,21 @@ export const ventasController = {
         return cel;
       }
 
-      // Función auxiliar para crear o buscar accesorio
-      async function findOrCreateAccesorio(accesorioData: any) {
-        if (!accesorioData) return null;
-        let acc = null;
-        if (accesorioData.id) {
-          acc = await Accesorios.findByPk(accesorioData.id);
-        }
-        if (!acc) {
-          acc = await Accesorios.create(accesorioData);
-        }
-        return acc;
+      // Función auxiliar para buscar accesorio por id
+      async function findAccesorioById(id: number | null) {
+        if (!id) return null;
+        return await Accesorios.findByPk(id);
       }
 
-      // Función auxiliar para crear o buscar reparación
-      async function findOrCreateReparacion(reparacionData: any) {
-        if (!reparacionData) return null;
-        let rep = null;
-        if (reparacionData.id) {
-          rep = await Reparacion.findByPk(reparacionData.id);
-        }
-        if (!rep) {
-          rep = await Reparacion.create(reparacionData);
-        }
-        return rep;
+      // Función auxiliar para buscar reparación por id
+      async function findReparacionById(id: number | null) {
+        if (!id) return null;
+        return await Reparacion.findByPk(id);
       }
 
       const cel = await findOrCreateCelular(celular);
-      const acc = await findOrCreateAccesorio(accesorio);
-      const rep = await findOrCreateReparacion(reparacion);
+      const acc = await findAccesorioById(accesorioId);
+      const rep = await findReparacionById(reparacionId);
 
       const nuevaVenta = await Venta.create({
         cantidad,
@@ -87,6 +74,7 @@ export const ventasController = {
 
       res.status(201).json(nuevaVenta);
     } catch (error) {
+      console.error('Error en createVenta:', error);
       next(error);
     }
   }

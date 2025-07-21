@@ -5,14 +5,10 @@ import {
   Paper,
   Box,
   TextField,
-  MenuItem,
-  Select,
-  InputLabel,
-  FormControl,
   Button,
   Alert,
   CircularProgress,
-  FormHelperText,
+  Autocomplete,
 } from '@mui/material';
 import axios from 'axios';
 
@@ -78,10 +74,19 @@ const AddVenta: React.FC = () => {
     fetchData();
   }, []);
 
-  // Al seleccionar celular, se autocompletan los campos
-  const handleCelularChange = (value: number | '') => {
-    setSelectedCelularId(value);
-    if (value === '') {
+  const handleCelularSelect = (value: Celular | null) => {
+    if (value) {
+      setSelectedCelularId(value.id);
+      setCelularData({
+        modelo: value.modelo,
+        almacenamiento: value.almacenamiento,
+        bateria: value.bateria,
+        color: value.color,
+        precio: value.precio,
+        observaciones: value.observaciones || '',
+      });
+    } else {
+      setSelectedCelularId('');
       setCelularData({
         modelo: '',
         almacenamiento: '',
@@ -90,27 +95,14 @@ const AddVenta: React.FC = () => {
         precio: 0,
         observaciones: '',
       });
-    } else {
-      const c = celulares.find((cel) => cel.id === value);
-      if (c) {
-        setCelularData({
-          modelo: c.modelo,
-          almacenamiento: c.almacenamiento,
-          bateria: c.bateria,
-          color: c.color,
-          precio: c.precio,
-          observaciones: c.observaciones || '',
-        });
-      }
     }
-    // Limpiar otros selects
     setSelectedAccesorio('');
     setSelectedReparacion('');
   };
 
-  const handleAccesorioChange = (value: number | '') => {
-    setSelectedAccesorio(value);
-    if (value !== '') {
+  const handleAccesorioSelect = (value: Item | null) => {
+    setSelectedAccesorio(value ? value.id : '');
+    if (value) {
       setSelectedCelularId('');
       setCelularData({
         modelo: '',
@@ -123,9 +115,10 @@ const AddVenta: React.FC = () => {
       setSelectedReparacion('');
     }
   };
-  const handleReparacionChange = (value: number | '') => {
-    setSelectedReparacion(value);
-    if (value !== '') {
+
+  const handleReparacionSelect = (value: Reparacion | null) => {
+    setSelectedReparacion(value ? value.id : '');
+    if (value) {
       setSelectedCelularId('');
       setCelularData({
         modelo: '',
@@ -171,12 +164,12 @@ const AddVenta: React.FC = () => {
 
     setLoading(true);
     try {
-      await axios.post('/ventas', {
+      await axios.post('http://localhost:3001/ventas', {
         cantidad,
         total,
         celular: selectedCelularId ? { id: selectedCelularId } : { ...celularData },
-        accesorioId: selectedAccesorio || undefined,
-        reparacionId: selectedReparacion || undefined,
+        accesorioId: selectedAccesorio !== '' ? selectedAccesorio : null,
+        reparacionId: selectedReparacion !== '' ? selectedReparacion : null,
       });
       setSuccess('Venta agregada con éxito');
       setCantidad(1);
@@ -206,40 +199,24 @@ const AddVenta: React.FC = () => {
           Agregar Nueva Venta
         </Typography>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {success}
-          </Alert>
-        )}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel id="celular-label">Celular</InputLabel>
-            <Select
-              labelId="celular-label"
-              value={selectedCelularId}
-              label="Celular"
-              onChange={(e) => handleCelularChange(Number(e.target.value) || '')}
-              disabled={loading}
-            >
-              <MenuItem value="">Nuevo celular</MenuItem>
-              {celulares.map((cel) => (
-                <MenuItem key={cel.id} value={cel.id}>
-                  {cel.modelo}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>
-              Seleccione un celular para autocompletar o escriba uno nuevo abajo
-            </FormHelperText>
-          </FormControl>
+          {/* Autocomplete celular */}
+          <Autocomplete
+            options={celulares}
+            getOptionLabel={(option) => option.modelo}
+            value={celulares.find((c) => c.id === selectedCelularId) || null}
+            onChange={(_, value) => handleCelularSelect(value)}
+            renderInput={(params) => (
+              <TextField {...params} label="Celular (opcional)" sx={{ mb: 2 }} />
+            )}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            disabled={loading}
+          />
 
-          {/* Inputs para los campos del celular */}
+          {/* Inputs para celular */}
           <TextField
             label="Modelo"
             fullWidth
@@ -298,51 +275,33 @@ const AddVenta: React.FC = () => {
             disabled={loading}
           />
 
-          {/* Select accesorios */}
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel id="accesorio-label">Accesorio</InputLabel>
-            <Select
-              labelId="accesorio-label"
-              value={selectedAccesorio}
-              label="Accesorio"
-              onChange={(e) => handleAccesorioChange(Number(e.target.value) || '')}
-              disabled={loading}
-            >
-              <MenuItem value="">Ninguno</MenuItem>
-              {accesorios.map((acc) => (
-                <MenuItem key={acc.id} value={acc.id}>
-                  {acc.nombre}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>
-              Seleccione un accesorio (opcional)
-            </FormHelperText>
-          </FormControl>
+          {/* Autocomplete accesorios */}
+          <Autocomplete
+            options={accesorios}
+            getOptionLabel={(option) => option.nombre}
+            value={accesorios.find((a) => a.id === selectedAccesorio) || null}
+            onChange={(_, value) => handleAccesorioSelect(value)}
+            renderInput={(params) => (
+              <TextField {...params} label="Accesorio (opcional)" sx={{ mb: 2 }} />
+            )}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            disabled={loading}
+          />
 
-          {/* Select reparaciones */}
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel id="reparacion-label">Reparación</InputLabel>
-            <Select
-              labelId="reparacion-label"
-              value={selectedReparacion}
-              label="Reparación"
-              onChange={(e) => handleReparacionChange(Number(e.target.value) || '')}
-              disabled={loading}
-            >
-              <MenuItem value="">Ninguno</MenuItem>
-              {reparaciones.map((rep) => (
-                <MenuItem key={rep.id} value={rep.id}>
-                  {rep.descripcion}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>
-              Seleccione una reparación (opcional)
-            </FormHelperText>
-          </FormControl>
+          {/* Autocomplete reparaciones */}
+          <Autocomplete
+            options={reparaciones}
+            getOptionLabel={(option) => option.descripcion}
+            value={reparaciones.find((r) => r.id === selectedReparacion) || null}
+            onChange={(_, value) => handleReparacionSelect(value)}
+            renderInput={(params) => (
+              <TextField {...params} label="Reparación (opcional)" sx={{ mb: 2 }} />
+            )}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            disabled={loading}
+          />
 
-          {/* Cantidad y total */}
+          {/* Cantidad y Total */}
           <TextField
             label="Cantidad"
             type="number"
