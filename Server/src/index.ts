@@ -10,6 +10,8 @@ import ventas from './Routes/ventaRoutes'
 import celulares from './Routes/celularesRoutes';
 import reparaciones from './Routes/reparacionesRoutes';
 import accesorios from './Routes/AccRoutes';
+import notaRoutes from './Routes/NotasRoutes';
+
 const app = express();
 app.use(cors({
   origin: "http://localhost:3000", // URL donde corre tu React
@@ -24,7 +26,7 @@ app.use('/ventas', ventas);
 app.use('/celulares', celulares);
 app.use('/accesorios', accesorios);
 app.use('/reparaciones', reparaciones);
-
+app.use('/notas', notaRoutes);
 // Manejo de errores global
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err);

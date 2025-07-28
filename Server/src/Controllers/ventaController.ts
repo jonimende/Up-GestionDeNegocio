@@ -23,53 +23,67 @@ export const ventasController = {
         cantidad,
         total,
         fecha,
-        celular,    // puede ser null o {id, ...}
-        accesorioId,  // puede ser null o number
-        reparacionId, // puede ser null o number
+        celularId,
+        accesorioId,
+        reparacionId,
       } = req.body;
 
-      // Validación mínima
-      if (!cantidad || !total) {
-        return res.status(400).json({ error: 'Cantidad y total son requeridos' });
+      // Validaciones básicas
+      if (!cantidad || cantidad <= 0) {
+        return res.status(400).json({ error: 'Cantidad inválida' });
+      }
+      if (!total || total <= 0) {
+        return res.status(400).json({ error: 'Total inválido' });
+      }
+      if (!celularId && !accesorioId && !reparacionId) {
+        return res.status(400).json({ error: 'Debe especificar un producto para la venta' });
       }
 
-      // Función auxiliar para crear o buscar el celular
-      async function findOrCreateCelular(celularData: any) {
-        if (!celularData || Object.keys(celularData).length === 0) return null;
-
-        let cel = null;
-        if (celularData.id) {
-          cel = await Celular.findByPk(celularData.id);
+      // Validar y descontar stock celular si aplica
+      if (celularId) {
+        const celular = await Celular.findByPk(celularId);
+        if (!celular) {
+          return res.status(404).json({ error: 'Celular no encontrado' });
         }
-        if (!cel) {
-          cel = await Celular.create(celularData);
+
+        if ((celular.stock ?? 0) < cantidad) {
+          return res.status(400).json({ error: 'Stock insuficiente en celular' });
         }
-        return cel;
+
+        celular.stock = (celular.stock ?? 0) - cantidad;
+        await celular.save();
       }
 
-      // Función auxiliar para buscar accesorio por id
-      async function findAccesorioById(id: number | null) {
-        if (!id) return null;
-        return await Accesorios.findByPk(id);
+      // Validar y descontar stock accesorio si aplica
+      if (accesorioId) {
+        const accesorio = await Accesorios.findByPk(accesorioId);
+        if (!accesorio) {
+          return res.status(404).json({ error: 'Accesorio no encontrado' });
+        }
+
+        if ((accesorio.stock ?? 0) < cantidad) {
+          return res.status(400).json({ error: 'Stock insuficiente en accesorio' });
+        }
+
+        accesorio.stock = (accesorio.stock ?? 0) - cantidad;
+        await accesorio.save();
       }
 
-      // Función auxiliar para buscar reparación por id
-      async function findReparacionById(id: number | null) {
-        if (!id) return null;
-        return await Reparacion.findByPk(id);
+      // Validar reparación si aplica (no afecta stock)
+      if (reparacionId) {
+        const reparacion = await Reparacion.findByPk(reparacionId);
+        if (!reparacion) {
+          return res.status(404).json({ error: 'Reparación no encontrada' });
+        }
       }
-
-      const cel = await findOrCreateCelular(celular);
-      const acc = await findAccesorioById(accesorioId);
-      const rep = await findReparacionById(reparacionId);
 
       const nuevaVenta = await Venta.create({
         cantidad,
         total,
         fecha: fecha || new Date(),
-        celularId: cel ? cel.id : null,
-        accesorioId: acc ? acc.id : null,
-        reparacionId: rep ? rep.id : null,
+        celularId: celularId || null,
+        accesorioId: accesorioId || null,
+        reparacionId: reparacionId || null,
       });
 
       res.status(201).json(nuevaVenta);
@@ -77,5 +91,5 @@ export const ventasController = {
       console.error('Error en createVenta:', error);
       next(error);
     }
-  }
+  },
 };

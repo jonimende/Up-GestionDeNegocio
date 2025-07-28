@@ -3,30 +3,39 @@ import sequelize from "../db";
 
 export class Reparacion extends Model {
   public id!: number;
-  public descripcion!: string;       // qué se reparó
-  public valor!: number;             // valor de la reparación
-  public reparadoPor!: string;       // quién lo reparó
+  public descripcion!: string;
+  public valor!: number;
+  public reparadoPor!: string;
 }
 
 Reparacion.init(
   {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+      field: "id",
+    },
     descripcion: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: "descripcion",
     },
     valor: {
       type: DataTypes.FLOAT,
       allowNull: false,
+      field: "valor",
     },
     reparadoPor: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: "reparadopor", // mapea a la columna exacta en la base
     },
   },
   {
     sequelize,
     modelName: "Reparacion",
-    tableName: "reparaciones",
+    tableName: "reparaciones", // nombre de tabla real en minúscula
     timestamps: false,
   }
 );

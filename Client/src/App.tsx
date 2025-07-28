@@ -4,6 +4,8 @@ import Login from "./Components/Login";
 import PrivateRoute from "./Pages/PrivateRoutes";
 import Home from "./Pages/Home";
 import AddVenta  from "./Components/AddVenta";
+import Notas from "./Components/Notas";
+import AddStock from "./Components/AddStock";
 const App: React.FC = () => {
   const isAuthenticated = !!localStorage.getItem("token");
 
@@ -14,6 +16,8 @@ const App: React.FC = () => {
       <Route element={<PrivateRoute isAuthenticated={isAuthenticated} />}>
         <Route path="/home" element={<Home />} />
         <Route path="/ventas/nuevo" element={<AddVenta />} />
+        <Route path="/notas" element={<Notas />} />
+        <Route path="/stock/nuevo" element={<AddStock />} />
       </Route>
     </Routes>
   );

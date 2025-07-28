@@ -1,3 +1,4 @@
+// Home.tsx (modificado solo el botón Agregar Stock)
 import React from "react";
 import { Container, Typography, Button, Box } from "@mui/material";
 import { useNavigate } from "react-router-dom";
@@ -9,12 +10,21 @@ const Home: React.FC = () => {
     navigate("/ventas/nuevo");
   };
 
+  const handleVerNotas = () => {
+    navigate("/notas");
+  };
+
+  const handleAgregarStock = () => {
+    navigate("/stock/nuevo");  // Navegar a la ruta de agregar stock
+  };
+
   return (
     <Container maxWidth="sm" sx={{ mt: 8, textAlign: "center" }}>
       <Typography variant="h3" gutterBottom>
         Bienvenido al Home Privado
       </Typography>
-      <Box sx={{ mt: 4 }}>
+
+      <Box sx={{ mt: 4, display: "flex", flexDirection: "column", gap: 2 }}>
         <Button
           variant="contained"
           color="primary"
@@ -22,6 +32,24 @@ const Home: React.FC = () => {
           onClick={handleAgregarVenta}
         >
           Agregar Venta
+        </Button>
+
+        <Button
+          variant="outlined"
+          color="secondary"
+          size="large"
+          onClick={handleVerNotas}
+        >
+          Ver Notas
+        </Button>
+
+        <Button
+          variant="contained"
+          color="success"
+          size="large"
+          onClick={handleAgregarStock}
+        >
+          Agregar Stock
         </Button>
       </Box>
     </Container>
