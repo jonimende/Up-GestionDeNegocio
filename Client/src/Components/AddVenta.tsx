@@ -32,6 +32,8 @@ interface Reparacion {
   descripcion: string;
 }
 
+// ... importaciones y tipos igual ...
+
 const AddVenta: React.FC = () => {
   const [celulares, setCelulares] = useState<Celular[]>([]);
   const [accesorios, setAccesorios] = useState<Item[]>([]);
@@ -96,40 +98,14 @@ const AddVenta: React.FC = () => {
         observaciones: '',
       });
     }
-    setSelectedAccesorio('');
-    setSelectedReparacion('');
   };
 
   const handleAccesorioSelect = (value: Item | null) => {
     setSelectedAccesorio(value ? value.id : '');
-    if (value) {
-      setSelectedCelularId('');
-      setCelularData({
-        modelo: '',
-        almacenamiento: '',
-        bateria: '',
-        color: '',
-        precio: 0,
-        observaciones: '',
-      });
-      setSelectedReparacion('');
-    }
   };
 
   const handleReparacionSelect = (value: Reparacion | null) => {
     setSelectedReparacion(value ? value.id : '');
-    if (value) {
-      setSelectedCelularId('');
-      setCelularData({
-        modelo: '',
-        almacenamiento: '',
-        bateria: '',
-        color: '',
-        precio: 0,
-        observaciones: '',
-      });
-      setSelectedAccesorio('');
-    }
   };
 
   const handleInputChange = (field: keyof typeof celularData, value: string | number) => {
@@ -203,7 +179,7 @@ const AddVenta: React.FC = () => {
         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
-          {/* Autocomplete celular */}
+
           <Autocomplete
             options={celulares}
             getOptionLabel={(option) => option.modelo}
@@ -216,7 +192,6 @@ const AddVenta: React.FC = () => {
             disabled={loading}
           />
 
-          {/* Inputs para celular */}
           <TextField
             label="Modelo"
             fullWidth
@@ -275,7 +250,6 @@ const AddVenta: React.FC = () => {
             disabled={loading}
           />
 
-          {/* Autocomplete accesorios */}
           <Autocomplete
             options={accesorios}
             getOptionLabel={(option) => option.nombre}
@@ -288,7 +262,6 @@ const AddVenta: React.FC = () => {
             disabled={loading}
           />
 
-          {/* Autocomplete reparaciones */}
           <Autocomplete
             options={reparaciones}
             getOptionLabel={(option) => option.descripcion}
@@ -301,7 +274,6 @@ const AddVenta: React.FC = () => {
             disabled={loading}
           />
 
-          {/* Cantidad y Total */}
           <TextField
             label="Cantidad"
             type="number"
