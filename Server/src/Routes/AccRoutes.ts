@@ -1,11 +1,13 @@
 // routes/accesorios.ts
 import { Router } from "express";
 import { Accesorios } from "../Models/Accesorios";
+import { authenticateToken } from "../Middlewares/authMiddlewares";
+import { isAdmin } from "../Middlewares/isAdmin";
 
 const router = Router();
 
 // GET - obtener todos los accesorios
-router.get("/", async (req, res) => {
+router.get("/",authenticateToken, async (req, res) => {
   try {
     const accesorios = await Accesorios.findAll();
     res.json(accesorios);
@@ -16,7 +18,7 @@ router.get("/", async (req, res) => {
 });
 
 // GET - obtener un accesorio por ID
-router.get("/:id", async (req, res) => {
+router.get("/:id",authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const accesorio = await Accesorios.findByPk(id);
@@ -31,7 +33,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST - crear un nuevo accesorio
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, async (req, res) => {
   try {
     const { nombre, stock } = req.body;
 
@@ -52,7 +54,7 @@ router.post("/", async (req, res) => {
 });
 
 // PUT - actualizar un accesorio por ID
-router.put("/:id", async (req, res) => {
+router.put("/:id",authenticateToken, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const accesorio = await Accesorios.findByPk(id);
@@ -76,7 +78,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // DELETE - eliminar un accesorio por ID
-router.delete("/:id", async (req, res) => {
+router.delete("/:id",authenticateToken, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const accesorio = await Accesorios.findByPk(id);

@@ -7,14 +7,14 @@ async function crearUsuario() {
   try {
     await sequelize.authenticate();
 
-    const nombre = "admin";
-    const passwordPlano = "admin123";
+    const nombre = "ariel";
+    const passwordPlano = "arielAdmin";
     const passwordHasheada = await bcrypt.hash(passwordPlano, 10);
 
     const usuario = await Usuario.create({
       nombre,
       password: passwordHasheada,
-      // si tenés más campos, agregalos acá
+      admin:true,
     });
 
     console.log("✅ Usuario creado con éxito:", usuario.toJSON());

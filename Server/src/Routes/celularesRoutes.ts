@@ -1,11 +1,13 @@
 // routes/celulares.ts
 import { Router } from "express";
 import { Celular } from "../Models/Celulares";
+import { authenticateToken } from "../Middlewares/authMiddlewares";
+import { isAdmin } from "../Middlewares/isAdmin";
 
 const router = Router();
 
 // GET - obtener todos los celulares
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
   try {
     const celulares = await Celular.findAll();
     res.json(celulares);
@@ -16,7 +18,7 @@ router.get("/", async (req, res) => {
 });
 
 // GET - obtener un celular por ID
-router.get("/:id", async (req, res) => {
+router.get("/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const celular = await Celular.findByPk(id);
@@ -31,7 +33,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST - crear un nuevo celular
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, async (req, res) => {
   try {
     const {
       modelo,
@@ -91,7 +93,7 @@ router.post("/", async (req, res) => {
 });
 
 // PUT - actualizar un celular por ID
-router.put("/:id", async (req, res) => {
+router.put("/:id", authenticateToken, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const celular = await Celular.findByPk(id);
@@ -144,7 +146,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // DELETE - eliminar un celular por ID
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateToken, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const celular = await Celular.findByPk(id);
