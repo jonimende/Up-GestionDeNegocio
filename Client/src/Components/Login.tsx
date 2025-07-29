@@ -29,12 +29,17 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post<{ token: string }>("http://localhost:3001/auth/login", {
-        nombre: nombre.trim(),
-        password,
-      });
+      const response = await axios.post<{ token: string; admin: boolean }>(
+        "http://localhost:3001/auth/login",
+        {
+          nombre: nombre.trim(),
+          password,
+        }
+      );
 
       localStorage.setItem("token", response.data.token);
+      localStorage.setItem("admin", response.data.admin.toString());
+
       navigate("/home");
     } catch (err: unknown) {
       if (isAxiosError(err)) {

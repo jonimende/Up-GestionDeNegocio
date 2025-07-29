@@ -1,13 +1,19 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 
+// Tipos
 type Reparacion = {
   id: number;
   descripcion: string;
   valor: number;
 };
 
+type Proveedor = {
+  id: number;
+  nombre: string;
+};
+
 type Props = {
-  onClose?: () => void; // Prop opcional para cerrar modal o navegación
+  onClose?: () => void;
 };
 
 type CelularForm = {
@@ -22,6 +28,7 @@ type CelularForm = {
   fechaIngreso: string;
   observaciones: string;
   stock: string;
+  idProveedor: string | number;
 };
 
 type AccesorioForm = {
@@ -29,8 +36,12 @@ type AccesorioForm = {
   stock: string;
 };
 
+const inputClass = "w-full border border-gray-300 rounded px-3 py-2";
+
 const AddStock: React.FC<Props> = ({ onClose }) => {
   const [tipo, setTipo] = useState<null | "celular" | "accesorio">(null);
+  const [reparaciones, setReparaciones] = useState<Reparacion[]>([]);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
 
   const [celularForm, setCelularForm] = useState<CelularForm>({
     modelo: "",
@@ -44,6 +55,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     fechaIngreso: "",
     observaciones: "",
     stock: "",
+    idProveedor: "",
   });
 
   const [accesorioForm, setAccesorioForm] = useState<AccesorioForm>({
@@ -51,90 +63,129 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     stock: "",
   });
 
-  const [reparaciones, setReparaciones] = useState<Reparacion[]>([]);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Cargar reparaciones al montar el componente
+  useEffect(() => {
+    if (successMsg) {
+      const timeout = setTimeout(() => setSuccessMsg(null), 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [successMsg]);
+
   useEffect(() => {
     fetch("http://localhost:3001/reparaciones")
       .then((res) => {
         if (!res.ok) throw new Error("Error al cargar reparaciones");
         return res.json();
       })
-      .then((data) => setReparaciones(data))
+      .then(setReparaciones)
       .catch(() => setReparaciones([]));
   }, []);
 
-  // Manejo de cambios en formulario celular
-  const handleCelularChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  useEffect(() => {
+    fetch("http://localhost:3001/proveedores")
+      .then((res) => {
+        if (!res.ok) throw new Error("Error al cargar proveedores");
+        return res.json();
+      })
+      .then(setProveedores)
+      .catch(() => setProveedores([]));
+  }, []);
 
+  const handleCelularChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
     setCelularForm((prev) => {
       const updated = { ...prev, [name]: value };
 
-      // Si cambia la reparación, actualizar valorFinal automáticamente
       if (name === "idReparacion") {
         const reparacion = reparaciones.find((r) => r.id.toString() === value);
-        if (reparacion) {
-          updated.valorFinal = reparacion.valor.toString();
-        } else {
-          updated.valorFinal = "";
-        }
+        updated.valorFinal = reparacion ? reparacion.valor.toString() : "";
       }
 
       return updated;
     });
   };
 
-  // Manejo de cambios en formulario accesorio
   const handleAccesorioChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setAccesorioForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Enviar formulario celular
   const submitCelular = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
 
-    // Validación mínima
+    const {
+      modelo,
+      almacenamiento,
+      bateria,
+      color,
+      precio,
+      costo,
+      fechaIngreso,
+      stock,
+      idProveedor,
+    } = celularForm;
+
     if (
-      !celularForm.modelo.trim() ||
-      !celularForm.almacenamiento.trim() ||
-      !celularForm.bateria.trim() ||
-      !celularForm.color.trim() ||
-      !celularForm.precio ||
-      !celularForm.costo ||
-      !celularForm.fechaIngreso ||
-      !celularForm.stock
+      !modelo.trim() ||
+      !almacenamiento.trim() ||
+      !bateria.trim() ||
+      !color.trim() ||
+      !precio ||
+      !costo ||
+      !fechaIngreso ||
+      !stock ||
+      !idProveedor
     ) {
       setError("Por favor, completa todos los campos obligatorios (*)");
       return;
     }
 
+    if (
+      parseFloat(precio) < 0 ||
+      parseFloat(costo) < 0 ||
+      parseInt(stock) < 0
+    ) {
+      setError("Los valores numéricos deben ser mayores o iguales a cero");
+      return;
+    }
+
     setLoading(true);
     try {
+      const token = localStorage.getItem("token") || "";
       const body = {
-        modelo: celularForm.modelo,
-        almacenamiento: celularForm.almacenamiento,
-        bateria: celularForm.bateria,
-        color: celularForm.color,
-        precio: parseFloat(celularForm.precio),
-        costo: parseFloat(celularForm.costo),
-        idReparacion: celularForm.idReparacion ? parseInt(celularForm.idReparacion.toString()) : null,
-        valorFinal: celularForm.valorFinal ? parseFloat(celularForm.valorFinal) : null,
-        fechaIngreso: celularForm.fechaIngreso,
+        modelo,
+        almacenamiento,
+        bateria,
+        color,
+        precio: parseFloat(precio),
+        costo: parseFloat(costo),
+        idReparacion: celularForm.idReparacion
+          ? parseInt(celularForm.idReparacion.toString())
+          : null,
+        valorFinal: celularForm.valorFinal
+          ? parseFloat(celularForm.valorFinal)
+          : null,
+        fechaIngreso,
         observaciones: celularForm.observaciones || null,
-        stock: parseInt(celularForm.stock),
+        stock: parseInt(stock),
+        idProveedor: parseInt(idProveedor.toString()),
       };
+
+      console.log("Enviando celular:", body);
 
       const res = await fetch("http://localhost:3001/celulares", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(body),
       });
 
@@ -156,35 +207,46 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         fechaIngreso: "",
         observaciones: "",
         stock: "",
+        idProveedor: "",
       });
-    } catch (err: any) {
-      setError(err.message || "Error inesperado");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error inesperado";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  // Enviar formulario accesorio
   const submitAccesorio = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
 
-    if (!accesorioForm.nombre.trim() || !accesorioForm.stock) {
+    const { nombre, stock } = accesorioForm;
+
+    if (!nombre.trim() || !stock) {
       setError("Por favor, completa todos los campos obligatorios (*)");
+      return;
+    }
+
+    if (parseInt(stock) < 0) {
+      setError("El stock debe ser mayor o igual a cero");
       return;
     }
 
     setLoading(true);
     try {
-      const body = {
-        nombre: accesorioForm.nombre,
-        stock: parseInt(accesorioForm.stock),
-      };
+      const token = localStorage.getItem("token") || "";
+      const body = { nombre, stock: parseInt(stock) };
+
+      console.log("Enviando accesorio:", body);
 
       const res = await fetch("http://localhost:3001/accesorios", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(body),
       });
 
@@ -195,22 +257,22 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
 
       setSuccessMsg("Accesorio agregado con éxito");
       setAccesorioForm({ nombre: "", stock: "" });
-    } catch (err: any) {
-      setError(err.message || "Error inesperado");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error inesperado";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  // Botón para cerrar o volver
   const handleCerrar = () => {
+    setTipo(null);
     onClose?.();
-    // Si usás navegación, podés agregar aquí para volver con useNavigate
   };
 
   return (
     <div className="max-w-lg mx-auto p-4 border rounded shadow">
-      {!tipo && (
+      {!tipo ? (
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-6">Agregar Stock</h2>
           <button
@@ -226,99 +288,69 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
             Agregar Accesorio
           </button>
         </div>
-      )}
-
-      {tipo === "celular" && (
+      ) : tipo === "celular" ? (
         <>
           <h2 className="text-xl font-semibold mb-4">Agregar Celular</h2>
           <form onSubmit={submitCelular} className="space-y-4">
-            <input
-              type="text"
-              name="modelo"
-              placeholder="Modelo *"
-              value={celularForm.modelo}
+            {[
+              "modelo",
+              "almacenamiento",
+              "bateria",
+              "color",
+              "precio",
+              "costo",
+              "fechaIngreso",
+              "stock",
+            ].map((field) => (
+              <input
+                key={field}
+                type={
+                  field === "fechaIngreso"
+                    ? "date"
+                    : ["precio", "costo", "stock"].includes(field)
+                    ? "number"
+                    : "text"
+                }
+                name={field}
+                placeholder={`${field.charAt(0).toUpperCase() + field.slice(1)} *`}
+                value={celularForm[field as keyof CelularForm] as string}
+                onChange={handleCelularChange}
+                className={inputClass}
+                required
+                min={["precio", "costo", "stock"].includes(field) ? 0 : undefined}
+                step={["precio", "costo"].includes(field) ? "0.01" : undefined}
+              />
+            ))}
+
+            <label htmlFor="idProveedor" className="block font-semibold">
+              Proveedor *
+            </label>
+            <select
+              id="idProveedor"
+              name="idProveedor"
+              value={celularForm.idProveedor}
               onChange={handleCelularChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className={inputClass}
               required
-            />
-            <input
-              type="text"
-              name="almacenamiento"
-              placeholder="Almacenamiento *"
-              value={celularForm.almacenamiento}
-              onChange={handleCelularChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              required
-            />
-            <input
-              type="text"
-              name="bateria"
-              placeholder="Batería *"
-              value={celularForm.bateria}
-              onChange={handleCelularChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              required
-            />
-            <input
-              type="text"
-              name="color"
-              placeholder="Color *"
-              value={celularForm.color}
-              onChange={handleCelularChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              required
-            />
-            <input
-              type="number"
-              name="precio"
-              placeholder="Precio *"
-              value={celularForm.precio}
-              onChange={handleCelularChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              min={0}
-              step="0.01"
-              required
-            />
-            <input
-              type="number"
-              name="costo"
-              placeholder="Costo *"
-              value={celularForm.costo}
-              onChange={handleCelularChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              min={0}
-              step="0.01"
-              required
-            />
-            <input
-              type="date"
-              name="fechaIngreso"
-              placeholder="Fecha Ingreso *"
-              value={celularForm.fechaIngreso}
-              onChange={handleCelularChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              required
-            />
+            >
+              <option value="">-- Seleccione un proveedor --</option>
+              {proveedores.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nombre}
+                </option>
+              ))}
+            </select>
+
             <textarea
               name="observaciones"
               placeholder="Observaciones"
               value={celularForm.observaciones}
               onChange={handleCelularChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className={inputClass}
               rows={3}
             />
-            <input
-              type="number"
-              name="stock"
-              placeholder="Stock *"
-              value={celularForm.stock}
-              onChange={handleCelularChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              min={0}
-              required
-            />
 
-            <label htmlFor="idReparacion" className="mt-4 block font-semibold">
+            <label htmlFor="idReparacion" className="block font-semibold">
               Reparación (opcional)
             </label>
             <select
@@ -326,12 +358,12 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
               name="idReparacion"
               value={celularForm.idReparacion}
               onChange={handleCelularChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className={inputClass}
             >
               <option value="">-- Seleccione una reparación --</option>
-              {reparaciones.map((rep) => (
-                <option key={rep.id} value={rep.id}>
-                  {rep.descripcion} (Valor: ${rep.valor.toFixed(2)})
+              {reparaciones.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.descripcion} (Valor: ${r.valor.toFixed(2)})
                 </option>
               ))}
             </select>
@@ -342,17 +374,13 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
               placeholder="Valor Final"
               value={celularForm.valorFinal}
               onChange={handleCelularChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className={inputClass}
               min={0}
               step="0.01"
             />
 
-            {error && (
-              <p className="text-red-600 font-semibold">{error}</p>
-            )}
-            {successMsg && (
-              <p className="text-green-600 font-semibold">{successMsg}</p>
-            )}
+            {error && <p className="text-red-600 font-semibold">{error}</p>}
+            {successMsg && <p className="text-green-600 font-semibold">{successMsg}</p>}
 
             <button
               type="submit"
@@ -363,9 +391,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
             </button>
           </form>
         </>
-      )}
-
-      {tipo === "accesorio" && (
+      ) : (
         <>
           <h2 className="text-xl font-semibold mb-4">Agregar Accesorio</h2>
           <form onSubmit={submitAccesorio} className="space-y-4">
@@ -375,7 +401,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
               placeholder="Nombre *"
               value={accesorioForm.nombre}
               onChange={handleAccesorioChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className={inputClass}
               required
             />
             <input
@@ -384,17 +410,13 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
               placeholder="Stock *"
               value={accesorioForm.stock}
               onChange={handleAccesorioChange}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className={inputClass}
               min={0}
               required
             />
 
-            {error && (
-              <p className="text-red-600 font-semibold">{error}</p>
-            )}
-            {successMsg && (
-              <p className="text-green-600 font-semibold">{successMsg}</p>
-            )}
+            {error && <p className="text-red-600 font-semibold">{error}</p>}
+            {successMsg && <p className="text-green-600 font-semibold">{successMsg}</p>}
 
             <button
               type="submit"
@@ -407,13 +429,9 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         </>
       )}
 
-      {/* Botón para cerrar o volver */}
       {tipo && (
         <button
-          onClick={() => {
-            setTipo(null);
-            onClose?.();
-          }}
+          onClick={handleCerrar}
           className="mt-6 underline text-sm text-gray-600 hover:text-gray-900"
           type="button"
         >

@@ -1,10 +1,11 @@
 // routes/celulares.ts
 import { Router } from 'express';
 import { Reparacion } from '../Models/Reparaciones';
+import { authenticateToken } from '../Middlewares/authMiddlewares';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const Reparaciones = await Reparacion.findAll();
     res.json(Reparaciones);

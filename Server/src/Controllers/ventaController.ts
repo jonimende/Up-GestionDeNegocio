@@ -1,10 +1,13 @@
+// Controllers/ventaController.ts
 import { Request, Response, NextFunction } from 'express';
 import { Venta } from '../Models/Ventas';
 import { Celular } from '../Models/Celulares';
 import { Accesorios } from '../Models/Accesorios';
 import { Reparacion } from '../Models/Reparaciones';
+import sequelize from '../db';
 
 export const ventasController = {
+  // Traer todas las ventas
   getVentas: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const ventas = await Venta.findAll({
@@ -17,64 +20,33 @@ export const ventasController = {
     }
   },
 
+  // Venta normal (usuario común)
   createVenta: async (req: Request, res: Response, next: NextFunction) => {
+    const t = await sequelize.transaction();
     try {
-      const {
-        cantidad,
-        total,
-        fecha,
-        celularId,
-        accesorioId,
-        reparacionId,
-      } = req.body;
+      const { cantidad, total, fecha, celularId, accesorioId, reparacionId } = req.body;
 
-      // Validaciones básicas
-      if (!cantidad || cantidad <= 0) {
-        return res.status(400).json({ error: 'Cantidad inválida' });
-      }
-      if (!total || total <= 0) {
-        return res.status(400).json({ error: 'Total inválido' });
-      }
-      if (!celularId && !accesorioId && !reparacionId) {
-        return res.status(400).json({ error: 'Debe especificar un producto para la venta' });
-      }
+      if (!cantidad || cantidad <= 0) return res.status(400).json({ error: 'Cantidad inválida' });
+      if (!total || total <= 0) return res.status(400).json({ error: 'Total inválido' });
+      if (!celularId && !accesorioId && !reparacionId) return res.status(400).json({ error: 'Debe especificar un producto' });
 
-      // Validar y descontar stock celular si aplica
       if (celularId) {
-        const celular = await Celular.findByPk(celularId);
-        if (!celular) {
-          return res.status(404).json({ error: 'Celular no encontrado' });
-        }
-
-        if ((celular.stock ?? 0) < cantidad) {
-          return res.status(400).json({ error: 'Stock insuficiente en celular' });
-        }
-
-        celular.stock = (celular.stock ?? 0) - cantidad;
-        await celular.save();
+        const celular = await Celular.findByPk(celularId, { transaction: t, lock: t.LOCK.UPDATE });
+        if (!celular || (celular.stock ?? 0) < cantidad) return res.status(400).json({ error: 'Celular inválido o stock insuficiente' });
+        celular.stock! -= cantidad;
+        await celular.save({ transaction: t });
       }
 
-      // Validar y descontar stock accesorio si aplica
       if (accesorioId) {
-        const accesorio = await Accesorios.findByPk(accesorioId);
-        if (!accesorio) {
-          return res.status(404).json({ error: 'Accesorio no encontrado' });
-        }
-
-        if ((accesorio.stock ?? 0) < cantidad) {
-          return res.status(400).json({ error: 'Stock insuficiente en accesorio' });
-        }
-
-        accesorio.stock = (accesorio.stock ?? 0) - cantidad;
-        await accesorio.save();
+        const accesorio = await Accesorios.findByPk(accesorioId, { transaction: t, lock: t.LOCK.UPDATE });
+        if (!accesorio || (accesorio.stock ?? 0) < cantidad) return res.status(400).json({ error: 'Accesorio inválido o stock insuficiente' });
+        accesorio.stock! -= cantidad;
+        await accesorio.save({ transaction: t });
       }
 
-      // Validar reparación si aplica (no afecta stock)
       if (reparacionId) {
-        const reparacion = await Reparacion.findByPk(reparacionId);
-        if (!reparacion) {
-          return res.status(404).json({ error: 'Reparación no encontrada' });
-        }
+        const reparacion = await Reparacion.findByPk(reparacionId, { transaction: t });
+        if (!reparacion) return res.status(404).json({ error: 'Reparación no encontrada' });
       }
 
       const nuevaVenta = await Venta.create({
@@ -84,12 +56,90 @@ export const ventasController = {
         celularId: celularId || null,
         accesorioId: accesorioId || null,
         reparacionId: reparacionId || null,
-      });
+      }, { transaction: t });
 
+      await t.commit();
       res.status(201).json(nuevaVenta);
     } catch (error) {
-      console.error('Error en createVenta:', error);
+      await t.rollback();
       next(error);
     }
   },
-};
+
+  // Venta extendida (solo admin)
+  createVentaAdmin: async (req: Request, res: Response, next: NextFunction) => {
+  const t = await sequelize.transaction();
+  try {
+    const {
+      cantidad,
+      total,
+      // fecha,  // Lo sacamos para que no se use directamente
+      celularId,
+      accesorioId,
+      reparacionId,
+      metodoPago,
+      descuento,
+      comprador,
+    } = req.body;
+
+    if (!cantidad || cantidad <= 0) return res.status(400).json({ error: 'Cantidad inválida' });
+    if (!total || total <= 0) return res.status(400).json({ error: 'Total inválido' });
+
+    let fechaVenta = new Date(); // Fecha por defecto para la venta
+    let fechaIngresoCelular: Date | null = null;
+
+    if (celularId) {
+      const celular = await Celular.findByPk(celularId, { transaction: t, lock: t.LOCK.UPDATE });
+      if (!celular || (celular.stock ?? 0) < cantidad) {
+        await t.rollback();
+        return res.status(400).json({ error: 'Celular inválido o stock insuficiente' });
+      }
+      // Descontar stock
+      celular.stock! -= cantidad;
+      await celular.save({ transaction: t });
+
+      // Obtener fechaIngreso del celular para usar como fecha de la venta
+      fechaIngresoCelular = celular.fechaIngreso || null;
+    }
+
+    if (accesorioId) {
+      const accesorio = await Accesorios.findByPk(accesorioId, { transaction: t, lock: t.LOCK.UPDATE });
+      if (!accesorio || (accesorio.stock ?? 0) < cantidad) {
+        await t.rollback();
+        return res.status(400).json({ error: 'Accesorio inválido o stock insuficiente' });
+      }
+      accesorio.stock! -= cantidad;
+      await accesorio.save({ transaction: t });
+    }
+
+    if (reparacionId) {
+      const reparacion = await Reparacion.findByPk(reparacionId, { transaction: t });
+      if (!reparacion) {
+        await t.rollback();
+        return res.status(404).json({ error: 'Reparación no encontrada' });
+      }
+    }
+
+    // Si tenemos fechaIngresoCelular la usamos, sino la fecha actual
+    fechaVenta = fechaIngresoCelular ?? new Date();
+
+    const nuevaVenta = await Venta.create({
+      cantidad,
+      total,
+      fecha: fechaVenta,
+      celularId: celularId || null,
+      accesorioId: accesorioId || null,
+      reparacionId: reparacionId || null,
+      metodoPago: metodoPago || null,
+      descuento: descuento || null,
+      comprador: comprador || null,
+    }, { transaction: t });
+
+    await t.commit();
+    res.status(201).json(nuevaVenta);
+  } catch (error) {
+    await t.rollback();
+    next(error);
+  }
+},
+}
