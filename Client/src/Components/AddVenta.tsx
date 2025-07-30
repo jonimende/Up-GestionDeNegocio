@@ -9,6 +9,10 @@ import {
   Alert,
   CircularProgress,
   Autocomplete,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
 } from '@mui/material';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
@@ -21,7 +25,9 @@ interface Celular {
   color: string;
   precio: number;
   observaciones?: string | null;
-  fechaIngreso?: string | null; // <-- Agregado para autocompletar
+  fechaIngreso?: string | null;
+  imei?: string | null;
+  proveedorId?: number | null;
 }
 
 interface Item {
@@ -32,6 +38,7 @@ interface Item {
 interface Reparacion {
   id: number;
   descripcion: string;
+  valor: number;
 }
 
 interface Proveedor {
@@ -39,9 +46,7 @@ interface Proveedor {
   nombre: string;
 }
 
-interface DecodedToken {
-  admin: boolean;
-}
+const metodoPagoOptions = ['Efectivo', 'Transferencia'];
 
 const AddVenta: React.FC = () => {
   const [celulares, setCelulares] = useState<Celular[]>([]);
@@ -57,15 +62,20 @@ const AddVenta: React.FC = () => {
     color: '',
     precio: 0,
     observaciones: '',
+    imei: '',
+    proveedorId: null,
   });
 
   const [selectedAccesorio, setSelectedAccesorio] = useState<number | ''>('');
   const [selectedReparacion, setSelectedReparacion] = useState<number | ''>('');
   const [cantidad, setCantidad] = useState<number>(1);
   const [total, setTotal] = useState<number | ''>('');
+  const [imei, setImei] = useState<string>('');
+  const [metodoPago, setMetodoPago] = useState<string>('');
+
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Campos solo visibles para admin
+  // Campos solo admin
   const [comprador, setComprador] = useState('');
   const [ganancia, setGanancia] = useState<number | ''>('');
   const [idProveedor, setIdProveedor] = useState<number | ''>('');
@@ -82,31 +92,22 @@ const AddVenta: React.FC = () => {
         const token = localStorage.getItem('token');
         if (token) {
           const decoded = jwtDecode<{ admin: boolean }>(token);
-          if (decoded.admin) {
-            setIsAdmin(true);
-            console.log("ES ADMIN");
-          }
+          if (decoded.admin) setIsAdmin(true);
         }
-
         const config = {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         };
-
         const [celRes, accRes, repRes, provRes] = await Promise.all([
-          axios.get<Celular[]>("http://localhost:3001/celulares", config),
-          axios.get<Item[]>("http://localhost:3001/accesorios", config),
-          axios.get<Reparacion[]>("http://localhost:3001/reparaciones", config),
-          axios.get<Proveedor[]>("http://localhost:3001/proveedores", config),
+          axios.get<Celular[]>('http://localhost:3001/celulares', config),
+          axios.get<Item[]>('http://localhost:3001/accesorios', config),
+          axios.get<Reparacion[]>('http://localhost:3001/reparaciones', config),
+          axios.get<Proveedor[]>('http://localhost:3001/proveedores', config),
         ]);
-
         setCelulares(celRes.data);
         setAccesorios(accRes.data);
         setReparaciones(repRes.data);
         setProveedores(provRes.data);
-      } catch (error) {
-        console.error('Error cargando datos:', error);
+      } catch {
         setError('Error al cargar datos');
       }
     };
@@ -123,11 +124,15 @@ const AddVenta: React.FC = () => {
         color: value.color,
         precio: value.precio,
         observaciones: value.observaciones || '',
+        imei: value.imei || '',
+        proveedorId: value.proveedorId || null,
       });
-      // Autocompletamos fechaIngreso con la fecha del celular (formato yyyy-mm-dd)
       setFechaIngreso(value.fechaIngreso ? value.fechaIngreso.substring(0, 10) : '');
-      // Autocompletamos fechaVenta con la fecha actual (puede modificarse)
       setFechaVenta(new Date().toISOString().substring(0, 10));
+      if (isAdmin) setImei(value.imei || '');
+      else setImei('');
+      if (isAdmin && value.proveedorId) setIdProveedor(value.proveedorId);
+      else setIdProveedor('');
     } else {
       setSelectedCelularId('');
       setCelularData({
@@ -137,9 +142,13 @@ const AddVenta: React.FC = () => {
         color: '',
         precio: 0,
         observaciones: '',
+        imei: '',
+        proveedorId: null,
       });
       setFechaIngreso('');
       setFechaVenta('');
+      setImei('');
+      setIdProveedor('');
     }
   };
 
@@ -150,20 +159,19 @@ const AddVenta: React.FC = () => {
 
     if (!cantidad || cantidad < 1) return setError('Cantidad inválida');
     if (!total || total <= 0) return setError('Total inválido');
-
     if (
       selectedCelularId === '' &&
       selectedAccesorio === '' &&
       selectedReparacion === ''
-    ) return setError('Seleccione al menos un producto');
-
+    )
+      return setError('Seleccione al menos un producto');
     if (selectedCelularId === '' && !celularData.modelo)
       return setError('Complete los datos del celular');
-
     if (isAdmin && !comprador.trim()) return setError('Falta el comprador');
+    if (isAdmin && !imei.trim()) return setError('Falta el IMEI');
+    if (!metodoPago.trim()) return setError('Falta el método de pago');
 
     setLoading(true);
-
     try {
       const token = localStorage.getItem('token') || '';
       const payload: any = {
@@ -172,20 +180,19 @@ const AddVenta: React.FC = () => {
         celularId: selectedCelularId !== '' ? selectedCelularId : null,
         accesorioId: selectedAccesorio !== '' ? selectedAccesorio : null,
         reparacionId: selectedReparacion !== '' ? selectedReparacion : null,
+        metodoPago,
       };
-
       if (isAdmin) {
         payload.comprador = comprador;
         payload.ganancia = ganancia !== '' ? ganancia : null;
         payload.idProveedor = idProveedor !== '' ? idProveedor : null;
         payload.fechaIngreso = fechaIngreso || null;
         payload.fechaVenta = fechaVenta || null;
+        payload.imei = imei;
       }
-
-      await axios.post("http://localhost:3001/ventas", payload, {
+      await axios.post('http://localhost:3001/ventas', payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setSuccess('Venta agregada correctamente');
       setCantidad(1);
       setTotal('');
@@ -199,14 +206,17 @@ const AddVenta: React.FC = () => {
         color: '',
         precio: 0,
         observaciones: '',
+        imei: '',
+        proveedorId: null,
       });
-
       setComprador('');
       setGanancia('');
       setIdProveedor('');
       setFechaIngreso('');
       setFechaVenta('');
-    } catch (err) {
+      setImei('');
+      setMetodoPago('');
+    } catch {
       setError('Error al guardar la venta');
     } finally {
       setLoading(false);
@@ -216,10 +226,20 @@ const AddVenta: React.FC = () => {
   return (
     <Container maxWidth="sm" sx={{ mt: 6 }}>
       <Paper sx={{ p: 4 }}>
-        <Typography variant="h5" gutterBottom>Agregar Venta</Typography>
+        <Typography variant="h5" gutterBottom>
+          Agregar Venta
+        </Typography>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {success}
+          </Alert>
+        )}
 
         <Box component="form" onSubmit={handleSubmit}>
           <Autocomplete
@@ -227,7 +247,9 @@ const AddVenta: React.FC = () => {
             getOptionLabel={(option) => option.modelo}
             value={celulares.find((c) => c.id === selectedCelularId) || null}
             onChange={(_, value) => handleCelularSelect(value)}
-            renderInput={(params) => <TextField {...params} label="Celular" sx={{ mb: 2 }} />}
+            renderInput={(params) => (
+              <TextField {...params} label="Celular" sx={{ mb: 2 }} />
+            )}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             disabled={loading}
           />
@@ -237,7 +259,9 @@ const AddVenta: React.FC = () => {
             fullWidth
             sx={{ mb: 2 }}
             value={celularData.modelo}
-            onChange={(e) => setCelularData({ ...celularData, modelo: e.target.value })}
+            onChange={(e) =>
+              setCelularData({ ...celularData, modelo: e.target.value })
+            }
           />
 
           <TextField
@@ -245,7 +269,9 @@ const AddVenta: React.FC = () => {
             fullWidth
             sx={{ mb: 2 }}
             value={celularData.almacenamiento}
-            onChange={(e) => setCelularData({ ...celularData, almacenamiento: e.target.value })}
+            onChange={(e) =>
+              setCelularData({ ...celularData, almacenamiento: e.target.value })
+            }
           />
 
           <TextField
@@ -253,7 +279,9 @@ const AddVenta: React.FC = () => {
             fullWidth
             sx={{ mb: 2 }}
             value={celularData.bateria}
-            onChange={(e) => setCelularData({ ...celularData, bateria: e.target.value })}
+            onChange={(e) =>
+              setCelularData({ ...celularData, bateria: e.target.value })
+            }
           />
 
           <TextField
@@ -261,7 +289,9 @@ const AddVenta: React.FC = () => {
             fullWidth
             sx={{ mb: 2 }}
             value={celularData.color}
-            onChange={(e) => setCelularData({ ...celularData, color: e.target.value })}
+            onChange={(e) =>
+              setCelularData({ ...celularData, color: e.target.value })
+            }
           />
 
           <TextField
@@ -270,7 +300,9 @@ const AddVenta: React.FC = () => {
             type="number"
             sx={{ mb: 2 }}
             value={celularData.precio}
-            onChange={(e) => setCelularData({ ...celularData, precio: Number(e.target.value) })}
+            onChange={(e) =>
+              setCelularData({ ...celularData, precio: Number(e.target.value) })
+            }
           />
 
           <TextField
@@ -280,7 +312,9 @@ const AddVenta: React.FC = () => {
             rows={2}
             sx={{ mb: 2 }}
             value={celularData.observaciones}
-            onChange={(e) => setCelularData({ ...celularData, observaciones: e.target.value })}
+            onChange={(e) =>
+              setCelularData({ ...celularData, observaciones: e.target.value })
+            }
           />
 
           <Autocomplete
@@ -288,7 +322,9 @@ const AddVenta: React.FC = () => {
             getOptionLabel={(option) => option.nombre}
             value={accesorios.find((a) => a.id === selectedAccesorio) || null}
             onChange={(_, value) => setSelectedAccesorio(value ? value.id : '')}
-            renderInput={(params) => <TextField {...params} label="Accesorio" sx={{ mb: 2 }} />}
+            renderInput={(params) => (
+              <TextField {...params} label="Accesorio" sx={{ mb: 2 }} />
+            )}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             disabled={loading}
           />
@@ -297,8 +333,13 @@ const AddVenta: React.FC = () => {
             options={reparaciones}
             getOptionLabel={(option) => option.descripcion}
             value={reparaciones.find((r) => r.id === selectedReparacion) || null}
-            onChange={(_, value) => setSelectedReparacion(value ? value.id : '')}
-            renderInput={(params) => <TextField {...params} label="Reparación" sx={{ mb: 2 }} />}
+            onChange={(_, value) => {
+              setSelectedReparacion(value ? value.id : '');
+              if (value && value.valor) setTotal(value.valor);
+            }}
+            renderInput={(params) => (
+              <TextField {...params} label="Reparación" sx={{ mb: 2 }} />
+            )}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             disabled={loading}
           />
@@ -321,6 +362,35 @@ const AddVenta: React.FC = () => {
             onChange={(e) => setTotal(Number(e.target.value))}
           />
 
+          {/* IMEI solo admin */}
+          {isAdmin && (
+            <TextField
+              label="IMEI"
+              fullWidth
+              sx={{ mb: 2 }}
+              value={imei}
+              onChange={(e) => setImei(e.target.value)}
+            />
+          )}
+
+          <FormControl fullWidth sx={{ mb: 3 }}>
+            <InputLabel id="metodo-pago-label">Método de pago</InputLabel>
+            <Select
+              labelId="metodo-pago-label"
+              label="Método de pago"
+              value={metodoPago}
+              onChange={(e) => setMetodoPago(e.target.value)}
+              disabled={loading}
+            >
+              {metodoPagoOptions.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* Campos admin */}
           {isAdmin && (
             <>
               <TextField
@@ -330,7 +400,6 @@ const AddVenta: React.FC = () => {
                 value={comprador}
                 onChange={(e) => setComprador(e.target.value)}
               />
-
               <TextField
                 label="Ganancia"
                 fullWidth
@@ -339,7 +408,6 @@ const AddVenta: React.FC = () => {
                 value={ganancia}
                 onChange={(e) => setGanancia(Number(e.target.value))}
               />
-
               <Autocomplete
                 options={proveedores}
                 getOptionLabel={(option) => option.nombre}
@@ -351,7 +419,6 @@ const AddVenta: React.FC = () => {
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 disabled={loading}
               />
-
               <TextField
                 label="Fecha Ingreso"
                 type="date"
@@ -361,7 +428,6 @@ const AddVenta: React.FC = () => {
                 onChange={(e) => setFechaIngreso(e.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
-
               <TextField
                 label="Fecha Venta"
                 type="date"

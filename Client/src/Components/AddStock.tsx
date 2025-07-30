@@ -29,6 +29,7 @@ type CelularForm = {
   observaciones: string;
   stock: string;
   idProveedor: string | number;
+  imei: string; // agregado
 };
 
 type AccesorioForm = {
@@ -56,6 +57,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     observaciones: "",
     stock: "",
     idProveedor: "",
+    imei: "", // agregado
   });
 
   const [accesorioForm, setAccesorioForm] = useState<AccesorioForm>({
@@ -130,6 +132,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
       fechaIngreso,
       stock,
       idProveedor,
+      imei,
     } = celularForm;
 
     if (
@@ -141,9 +144,10 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
       !costo ||
       !fechaIngreso ||
       !stock ||
-      !idProveedor
+      !idProveedor ||
+      !imei.trim() // validación imei
     ) {
-      setError("Por favor, completa todos los campos obligatorios (*)");
+      setError("Por favor, completa todos los campos obligatorios (*) incluyendo IMEI");
       return;
     }
 
@@ -176,6 +180,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         observaciones: celularForm.observaciones || null,
         stock: parseInt(stock),
         idProveedor: parseInt(idProveedor.toString()),
+        imei, // agregado
       };
 
       console.log("Enviando celular:", body);
@@ -208,6 +213,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         observaciones: "",
         stock: "",
         idProveedor: "",
+        imei: "", // reiniciar
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error inesperado";
@@ -321,6 +327,17 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
                 step={["precio", "costo"].includes(field) ? "0.01" : undefined}
               />
             ))}
+
+            {/* Input IMEI */}
+            <input
+              type="text"
+              name="imei"
+              placeholder="IMEI *"
+              value={celularForm.imei}
+              onChange={handleCelularChange}
+              className={inputClass}
+              required
+            />
 
             <label htmlFor="idProveedor" className="block font-semibold">
               Proveedor *

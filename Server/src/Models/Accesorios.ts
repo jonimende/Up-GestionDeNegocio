@@ -5,6 +5,7 @@ export class Accesorios extends Model {
   public id!: number;
   public nombre!: string;
   public stock!: number | null;
+  public precio!: number;
 }
 
 Accesorios.init(
@@ -19,6 +20,11 @@ Accesorios.init(
       type: DataTypes.STRING,
       allowNull: false,
       field: "nombre", // campo real en la base
+    },
+    precio: {
+      type: DataTypes.FLOAT,
+      allowNull: false,
+      field: "precio",
     },
     stock: {
       type: DataTypes.INTEGER,

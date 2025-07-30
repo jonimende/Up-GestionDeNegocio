@@ -8,7 +8,9 @@ import Home from "./Pages/Home";
 import AddVenta from "./Components/AddVenta";
 import Notas from "./Components/Notas";
 import AddStock from "./Components/AddStock";
-
+import AdminVentas from "./Components/AdminVentas";
+import ControlDeStock from "./Components/ControlStock";
+import Caja from "./Components/Caja";
 interface TokenPayload {
   id: number;
   nombre: string;
@@ -38,8 +40,10 @@ const App: React.FC = () => {
         <Route path="/home" element={<Home />} />
         <Route path="/ventas/nuevo" element={<AddVenta />} />
         <Route path="/notas" element={<Notas />} />
-        {/* Ruta de stock solo para admin */}
+        {isAdmin && <Route path="/admin/ventas" element={<AdminVentas />} />}
         {isAdmin && <Route path="/stock/nuevo" element={<AddStock />} />}
+        {isAdmin && <Route path="/control-stock" element={<ControlDeStock />} />}
+        {isAdmin && <Route path="/ventas/caja" element={<Caja />} />}
       </Route>
     </Routes>
   );
