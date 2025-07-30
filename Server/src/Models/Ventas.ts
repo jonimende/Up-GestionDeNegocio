@@ -3,9 +3,10 @@ import sequelize from '../db';
 import { Celular } from './Celulares';
 import { Accesorios } from './Accesorios';
 import { Reparacion } from './Reparaciones';
+import { Proveedor } from './Proveedores';
 
 export type MetodoPago = 'Efectivo' | 'Transferencia';
-// Define los atributos del modelo Venta
+
 interface VentaAttributes {
   id: number;
   cantidad: number;
@@ -16,13 +17,13 @@ interface VentaAttributes {
   reparacionId?: number | null;
   metodoPago?: MetodoPago;
   descuento?: number | null;
-  comprador?: string;
+  comprador?: string | null;
+  ganancia?: number | null;
+  idProveedor?: number | null;
 }
 
-// Para creación, id y fecha pueden ser opcionales (ya que autoIncrement y defaultValue)
 interface VentaCreationAttributes extends Optional<VentaAttributes, 'id' | 'fecha'> {}
 
-// Extendemos Model con tipos de atributos
 export class Venta extends Model<VentaAttributes, VentaCreationAttributes> implements VentaAttributes {
   public id!: number;
   public cantidad!: number;
@@ -33,7 +34,10 @@ export class Venta extends Model<VentaAttributes, VentaCreationAttributes> imple
   public reparacionId!: number | null;
   public metodoPago!: MetodoPago;
   public descuento!: number | null;
-  public comprador!: string;
+  public comprador!: string | null;
+
+  public ganancia!: number | null;
+  public idProveedor!: number | null;
 }
 
 Venta.init({
@@ -41,22 +45,18 @@ Venta.init({
     type: DataTypes.INTEGER,
     autoIncrement: true,
     primaryKey: true,
-    field: 'id',
   },
   cantidad: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    field: 'cantidad',
   },
   total: {
     type: DataTypes.DECIMAL,
     allowNull: false,
-    field: 'total',
   },
   fecha: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
-    field: 'fecha',
   },
   celularId: {
     type: DataTypes.INTEGER,
@@ -81,12 +81,20 @@ Venta.init({
   descuento: {
     type: DataTypes.DECIMAL,
     allowNull: true,
-    field: 'descuento',
   },
   comprador: {
     type: DataTypes.STRING,
-    allowNull: false,
-    field: 'comprador',
+    allowNull: true,
+  },
+  // NUEVOS CAMPOS
+  ganancia: {
+    type: DataTypes.DECIMAL,
+    allowNull: true,
+  },
+  idProveedor: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'id_proveedor',
   },
 }, {
   sequelize,
@@ -104,3 +112,6 @@ Celular.hasMany(Venta, { foreignKey: 'celularId' });
 
 Venta.belongsTo(Accesorios, { foreignKey: 'accesorioId' });
 Accesorios.hasMany(Venta, { foreignKey: 'accesorioId' });
+
+Venta.belongsTo(Proveedor, { foreignKey: 'idProveedor' });
+Proveedor.hasMany(Venta, { foreignKey: 'idProveedor' });

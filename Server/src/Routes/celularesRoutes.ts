@@ -51,6 +51,7 @@ router.post("/", authenticateToken, async (req, res) => {
       fechaVenta,
       comprador,
       stock,
+      imei, // <-- Agregado imei
     } = req.body;
 
     // Validación básica (podés agregar express-validator más adelante)
@@ -83,6 +84,7 @@ router.post("/", authenticateToken, async (req, res) => {
       fechaVenta: fechaVenta || null,
       comprador: comprador || null,
       stock: stock ?? 0,
+      imei: imei || null, // <-- Guardar imei
     });
 
     res.status(201).json(nuevoCelular);
@@ -118,6 +120,7 @@ router.put("/:id", authenticateToken, isAdmin, async (req, res) => {
       fechaVenta,
       comprador,
       stock,
+      imei, // <-- Agregado imei
     } = req.body;
 
     await celular.update({
@@ -136,6 +139,7 @@ router.put("/:id", authenticateToken, isAdmin, async (req, res) => {
       fechaVenta: fechaVenta ?? celular.fechaVenta,
       comprador: comprador ?? celular.comprador,
       stock: stock ?? celular.stock,
+      imei: imei ?? celular.imei, // <-- Actualizar imei
     });
 
     res.json(celular);

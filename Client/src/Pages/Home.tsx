@@ -20,6 +20,19 @@ const Home: React.FC = () => {
     navigate("/stock/nuevo");
   };
 
+  const handleAdminVentas = () => {
+    navigate("/admin/ventas");
+  };
+
+  const handleControlStock = () => {
+    navigate("/control-stock");
+  };
+
+  // Nuevo handler para caja
+  const handleCaja = () => {
+    navigate("/ventas/caja");
+  };
+
   return (
     <Container maxWidth="sm" sx={{ mt: 8, textAlign: "center" }}>
       <Typography variant="h3" gutterBottom>
@@ -54,6 +67,34 @@ const Home: React.FC = () => {
               onClick={handleAgregarStock}
             >
               Agregar Stock
+            </Button>
+
+            <Button
+              variant="contained"
+              color="error"
+              size="large"
+              onClick={handleAdminVentas}
+            >
+              Administración de Ventas
+            </Button>
+
+            <Button
+              variant="contained"
+              color="info"
+              size="large"
+              onClick={handleControlStock}
+            >
+              Control de Stock
+            </Button>
+
+            {/* Botón nuevo para Caja */}
+            <Button
+              variant="contained"
+              color="warning"
+              size="large"
+              onClick={handleCaja}
+            >
+              Caja Diaria/Mensual
             </Button>
           </>
         )}

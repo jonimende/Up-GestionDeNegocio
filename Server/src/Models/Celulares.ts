@@ -15,6 +15,7 @@ export class Celular extends Model {
   public idReparacion!: number | null;
   public valorReparacion!: number | null;
   public valorFinal!: number | null;
+  public imei!: string | null;
   public ganancia!: number | null;
   public idProveedor!: number;
   public fechaIngreso!: Date;
@@ -69,6 +70,11 @@ Celular.init(
       type: DataTypes.FLOAT,
       allowNull: true,
       field: "valorfinal", // minúscula en la BD
+    },
+    imei:{
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "imei",
     },
     ganancia: {
       type: DataTypes.FLOAT,
