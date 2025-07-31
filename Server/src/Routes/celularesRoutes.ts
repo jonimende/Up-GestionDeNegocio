@@ -17,6 +17,17 @@ router.get("/", authenticateToken, async (req, res) => {
   }
 });
 
+router.get("/disponibles", async (req, res) => {
+  try {
+    const disponibles = await Celular.findAll({
+      where: { vendido: false },
+    });
+    res.json(disponibles);
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener celulares disponibles" });
+  }
+});
+
 // GET - obtener un celular por ID
 router.get("/:id", authenticateToken, async (req, res) => {
   try {
@@ -166,5 +177,6 @@ router.delete("/:id", authenticateToken, isAdmin, async (req, res) => {
     res.status(500).json({ message: "Error al eliminar celular" });
   }
 });
+
 
 export default router;

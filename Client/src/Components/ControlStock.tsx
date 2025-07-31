@@ -19,14 +19,16 @@ interface Celular {
   color: string;
   precio: number;
   stock: number;
-  idProveedor?: number; // si el backend devuelve solo el id
+  idProveedor?: number;
   imei: string;
+  vendido: boolean; // agregado vendido
 }
 
 interface Accesorio {
   id: number;
   nombre: string;
   stock: number;
+  vendido: boolean; // agregado vendido
 }
 
 const ControlDeStock: React.FC = () => {
@@ -84,6 +86,10 @@ const ControlDeStock: React.FC = () => {
     verificarAdminYFetch();
   }, []);
 
+  // Filtrar solo los que no están vendidos
+  const celularesDisponibles = celulares.filter((c) => !c.vendido);
+  const accesoriosDisponibles = accesorios.filter((a) => !a.vendido);
+
   const eliminarCelular = async (id: number) => {
     if (!window.confirm("¿Está seguro que desea eliminar este celular?")) return;
     const token = localStorage.getItem("token") || "";
@@ -137,7 +143,7 @@ const ControlDeStock: React.FC = () => {
 
       <section className="mb-10">
         <h3 className="text-2xl font-semibold mb-4">Celulares Disponibles</h3>
-        {celulares.length === 0 ? (
+        {celularesDisponibles.length === 0 ? (
           <p className="text-gray-600">No hay celulares en stock.</p>
         ) : (
           <div className="overflow-x-auto rounded border border-gray-300 shadow-sm">
@@ -165,15 +171,13 @@ const ControlDeStock: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {celulares.map((celular) => (
+                {celularesDisponibles.map((celular) => (
                   <tr key={celular.id} className="hover:bg-gray-50">
                     <td className="px-4 py-2 whitespace-nowrap">{celular.modelo}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{celular.almacenamiento}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{celular.bateria}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{celular.color}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      ${celular.precio.toFixed(2)}
-                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">${celular.precio.toFixed(2)}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{celular.stock}</td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       {getNombreProveedor(celular.idProveedor)}
@@ -197,7 +201,7 @@ const ControlDeStock: React.FC = () => {
 
       <section>
         <h3 className="text-2xl font-semibold mb-4">Accesorios Disponibles</h3>
-        {accesorios.length === 0 ? (
+        {accesoriosDisponibles.length === 0 ? (
           <p className="text-gray-600">No hay accesorios en stock.</p>
         ) : (
           <div className="overflow-x-auto rounded border border-gray-300 shadow-sm">
@@ -215,7 +219,7 @@ const ControlDeStock: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {accesorios.map((accesorio) => (
+                {accesoriosDisponibles.map((accesorio) => (
                   <tr key={accesorio.id} className="hover:bg-gray-50">
                     <td className="px-4 py-2 whitespace-nowrap">{accesorio.nombre}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{accesorio.stock}</td>

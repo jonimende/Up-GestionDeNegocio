@@ -6,6 +6,7 @@ export class Accesorios extends Model {
   public nombre!: string;
   public stock!: number | null;
   public precio!: number;
+  public vendido!: boolean;
 }
 
 Accesorios.init(
@@ -31,6 +32,11 @@ Accesorios.init(
      allowNull: false,
       defaultValue: 0,
       field: "stock",
+    },
+    vendido: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
   },
   {

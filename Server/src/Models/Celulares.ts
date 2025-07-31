@@ -22,6 +22,7 @@ export class Celular extends Model {
   public fechaVenta!: Date | null;
   public comprador!: string | null;
   public stock!: number | null;
+  public vendido!: boolean;
 }
 
 Celular.init(
@@ -106,6 +107,11 @@ Celular.init(
       allowNull: false,
       defaultValue: 0,
       field: "stock",
+    },
+    vendido: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
   },
   {
