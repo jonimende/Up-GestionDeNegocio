@@ -4,8 +4,8 @@ import { jwtDecode } from "jwt-decode";
 
 interface Venta {
   id: number;
-  cantidad: number;
-  total: string;
+  cantidad: number | string;
+  total: number | string;
   fecha: string;
   celularId?: number | null;
   accesorioId?: number | null;
@@ -13,7 +13,7 @@ interface Venta {
   comprador?: string | null;
   ganancia?: number | null;
   idProveedor?: number | null;
-  metodoPago?: string | null;  // <-- agregado
+  metodoPago?: string | null;
 
   Celular?: {
     modelo?: string;
@@ -52,7 +52,7 @@ interface VentaForm extends Venta {
   reparadoPor?: string;
   proveedorId?: number | null;
   proveedorNombre?: string;
-  metodoPago?: string | null;  // <-- agregado
+  metodoPago?: string | null;
 }
 
 interface DecodedToken {
@@ -64,6 +64,8 @@ interface Proveedor {
   nombre: string;
 }
 
+const METODOS_PAGO = ["Efectivo", "Transferencia", "Tarjeta"];
+
 const AdminVentas: React.FC = () => {
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -71,6 +73,7 @@ const AdminVentas: React.FC = () => {
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [form, setForm] = useState<Partial<VentaForm>>({});
   const [loading, setLoading] = useState(false);
+  const [errorValidacion, setErrorValidacion] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -116,6 +119,41 @@ const AdminVentas: React.FC = () => {
     );
   }
 
+  const validarFormulario = (): string | null => {
+    if (!form.fecha) return "La fecha es obligatoria";
+
+    if (form.cantidad === undefined || form.cantidad === null)
+      return "La cantidad es obligatoria";
+    if (typeof form.cantidad === "string") {
+      const cantidadNum = Number(form.cantidad);
+      if (isNaN(cantidadNum) || cantidadNum <= 0)
+        return "La cantidad debe ser mayor a 0";
+    } else if (form.cantidad <= 0) {
+      return "La cantidad debe ser mayor a 0";
+    }
+
+    if (form.total === undefined || form.total === null)
+      return "El total es obligatorio";
+    if (typeof form.total === "string") {
+      const totalNum = Number(form.total);
+      if (isNaN(totalNum) || totalNum <= 0) return "El total debe ser mayor a 0";
+    } else if (form.total <= 0) {
+      return "El total debe ser mayor a 0";
+    }
+
+    if (
+      form.proveedorId === null ||
+      form.proveedorId === undefined ||
+      form.proveedorId === null
+    )
+      return "Debe seleccionar un proveedor";
+
+    if (form.metodoPago && !METODOS_PAGO.includes(form.metodoPago))
+      return "Método de pago inválido";
+
+    return null;
+  };
+
   const handleEditClick = (venta: Venta) => {
     setEditandoId(venta.id);
     setForm({
@@ -141,8 +179,9 @@ const AdminVentas: React.FC = () => {
       proveedorId: venta.Proveedor?.id ?? null,
       proveedorNombre: venta.Proveedor?.nombre ?? "",
 
-      metodoPago: venta.metodoPago ?? "",  // <-- agregado
+      metodoPago: venta.metodoPago ?? "",
     });
+    setErrorValidacion(null);
   };
 
   const handleInputChange = (
@@ -166,6 +205,11 @@ const AdminVentas: React.FC = () => {
   };
 
   const handleSave = async () => {
+    const error = validarFormulario();
+    if (error) {
+      setErrorValidacion(error);
+      return;
+    }
     if (!editandoId) return;
     const token = localStorage.getItem("token") || "";
     try {
@@ -197,6 +241,7 @@ const AdminVentas: React.FC = () => {
       );
       setEditandoId(null);
       setForm({});
+      setErrorValidacion(null);
     } catch (error) {
       console.error("Error al guardar venta:", error);
     }
@@ -227,6 +272,9 @@ const AdminVentas: React.FC = () => {
   return (
     <div style={{ padding: 20 }}>
       <h2>Administración de Ventas</h2>
+      {errorValidacion && (
+        <p style={{ color: "red", marginBottom: 10 }}>{errorValidacion}</p>
+      )}
       <table border={1} cellPadding={5} cellSpacing={0}>
         <thead>
           <tr>
@@ -248,7 +296,7 @@ const AdminVentas: React.FC = () => {
             <th>Ganancia</th>
             <th>Proveedor</th>
             <th>Fecha Ingreso</th>
-            <th>Método de Pago</th> {/* <-- agregado */}
+            <th>Método de Pago</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -407,10 +455,11 @@ const AdminVentas: React.FC = () => {
                     onChange={handleInputChange}
                   >
                     <option value="">-- Seleccionar Método --</option>
-                    <option value="Efectivo">Efectivo</option>
-                    <option value="Transferencia">Transferencia</option>
-                    <option value="Tarjeta">Tarjeta</option>
-                    {/* Agrega otros métodos si usas */}
+                    {METODOS_PAGO.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
                   </select>
                 </td>
                 <td>
@@ -442,7 +491,7 @@ const AdminVentas: React.FC = () => {
                     ? new Date(venta.Celular.fechaIngreso).toLocaleDateString()
                     : "-"}
                 </td>
-                <td>{venta.metodoPago ?? "-"}</td> {/* <-- agregado */}
+                <td>{venta.metodoPago ?? "-"}</td>
                 <td>
                   <button onClick={() => handleEditClick(venta)}>Editar</button>
                   <button onClick={() => handleDelete(venta.id)}>Eliminar</button>

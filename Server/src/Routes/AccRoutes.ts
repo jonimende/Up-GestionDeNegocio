@@ -17,6 +17,16 @@ router.get("/",authenticateToken, async (req, res) => {
   }
 });
 
+router.get("/disponibles", async (req, res) => {
+  try {
+    const disponibles = await Accesorios.findAll({
+      where: { vendido: false },
+    });
+    res.json(disponibles);
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener accesorios disponibles" });
+  }
+});
 // GET - obtener un accesorio por ID
 router.get("/:id",authenticateToken, async (req, res) => {
   try {

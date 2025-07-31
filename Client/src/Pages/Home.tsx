@@ -33,6 +33,11 @@ const Home: React.FC = () => {
     navigate("/ventas/caja");
   };
 
+  // Nuevo handler para agregar reparación
+  const handleAgregarReparacion = () => {
+    navigate("/admin/reparaciones");
+  };
+
   return (
     <Container maxWidth="sm" sx={{ mt: 8, textAlign: "center" }}>
       <Typography variant="h3" gutterBottom>
@@ -87,7 +92,6 @@ const Home: React.FC = () => {
               Control de Stock
             </Button>
 
-            {/* Botón nuevo para Caja */}
             <Button
               variant="contained"
               color="warning"
@@ -95,6 +99,15 @@ const Home: React.FC = () => {
               onClick={handleCaja}
             >
               Caja Diaria/Mensual
+            </Button>
+
+            <Button
+              variant="contained"
+              color="secondary"
+              size="large"
+              onClick={handleAgregarReparacion}
+            >
+              Agregar Reparación
             </Button>
           </>
         )}

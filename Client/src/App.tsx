@@ -11,6 +11,7 @@ import AddStock from "./Components/AddStock";
 import AdminVentas from "./Components/AdminVentas";
 import ControlDeStock from "./Components/ControlStock";
 import Caja from "./Components/Caja";
+import AddReparacion from "./Components/AddRepairs";
 interface TokenPayload {
   id: number;
   nombre: string;
@@ -44,6 +45,7 @@ const App: React.FC = () => {
         {isAdmin && <Route path="/stock/nuevo" element={<AddStock />} />}
         {isAdmin && <Route path="/control-stock" element={<ControlDeStock />} />}
         {isAdmin && <Route path="/ventas/caja" element={<Caja />} />}
+        {isAdmin && <Route path="/admin/reparaciones" element={<AddReparacion />} />}
       </Route>
     </Routes>
   );

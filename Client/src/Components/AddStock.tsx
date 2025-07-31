@@ -29,7 +29,7 @@ type CelularForm = {
   observaciones: string;
   stock: string;
   idProveedor: string | number;
-  imei: string; // agregado
+  imei: string;
 };
 
 type AccesorioForm = {
@@ -57,7 +57,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     observaciones: "",
     stock: "",
     idProveedor: "",
-    imei: "", // agregado
+    imei: "",
   });
 
   const [accesorioForm, setAccesorioForm] = useState<AccesorioForm>({
@@ -76,37 +76,66 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     }
   }, [successMsg]);
 
+  // Carga reparaciones con token en header
   useEffect(() => {
-    fetch("http://localhost:3001/reparaciones")
+    const token = localStorage.getItem("token") || "";
+
+    fetch("http://localhost:3001/reparaciones", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Error al cargar reparaciones");
         return res.json();
       })
       .then(setReparaciones)
-      .catch(() => setReparaciones([]));
+      .catch((error) => {
+        console.error(error);
+        setReparaciones([]);
+      });
   }, []);
 
+  // Carga proveedores con token en header
   useEffect(() => {
-    fetch("http://localhost:3001/proveedores")
+    const token = localStorage.getItem("token") || "";
+
+    fetch("http://localhost:3001/proveedores", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Error al cargar proveedores");
         return res.json();
       })
       .then(setProveedores)
-      .catch(() => setProveedores([]));
+      .catch((error) => {
+        console.error(error);
+        setProveedores([]);
+      });
   }, []);
 
   const handleCelularChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setCelularForm((prev) => {
-      const updated = { ...prev, [name]: value };
 
-      if (name === "idReparacion") {
-        const reparacion = reparaciones.find((r) => r.id.toString() === value);
-        updated.valorFinal = reparacion ? reparacion.valor.toString() : "";
-      }
+    setCelularForm((prev) => {
+      let updated = { ...prev, [name]: value };
+
+      const precioNum =
+        name === "precio" ? parseFloat(value) : parseFloat(prev.precio);
+      const reparacion = reparaciones.find(
+        (r) =>
+          (name === "idReparacion" ? value : prev.idReparacion.toString()) ===
+          r.id.toString()
+      );
+      const valorReparacion = reparacion ? reparacion.valor : 0;
+
+      const precioValido = !isNaN(precioNum) ? precioNum : 0;
+
+      updated.valorFinal = (precioValido + valorReparacion).toFixed(2);
 
       return updated;
     });
@@ -145,9 +174,11 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
       !fechaIngreso ||
       !stock ||
       !idProveedor ||
-      !imei.trim() // validación imei
+      !imei.trim()
     ) {
-      setError("Por favor, completa todos los campos obligatorios (*) incluyendo IMEI");
+      setError(
+        "Por favor, completa todos los campos obligatorios (*) incluyendo IMEI"
+      );
       return;
     }
 
@@ -180,7 +211,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         observaciones: celularForm.observaciones || null,
         stock: parseInt(stock),
         idProveedor: parseInt(idProveedor.toString()),
-        imei, // agregado
+        imei,
       };
 
       console.log("Enviando celular:", body);
@@ -213,7 +244,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         observaciones: "",
         stock: "",
         idProveedor: "",
-        imei: "", // reiniciar
+        imei: "",
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error inesperado";
@@ -385,16 +416,15 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
               ))}
             </select>
 
-            <input
-              type="number"
-              name="valorFinal"
-              placeholder="Valor Final"
-              value={celularForm.valorFinal}
-              onChange={handleCelularChange}
-              className={inputClass}
-              min={0}
-              step="0.01"
-            />
+            <div>
+              <label className="block font-semibold mt-2">Total (Precio + Reparación)</label>
+              <input
+                type="text"
+                readOnly
+                value={celularForm.valorFinal}
+                className={inputClass + " bg-gray-200 cursor-not-allowed"}
+              />
+            </div>
 
             {error && <p className="text-red-600 font-semibold">{error}</p>}
             {successMsg && <p className="text-green-600 font-semibold">{successMsg}</p>}

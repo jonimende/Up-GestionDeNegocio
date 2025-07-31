@@ -27,7 +27,7 @@ router.post('/', authenticateToken, async (req, res, next) => {
 });
 
 router.post('/admin', authenticateToken, isAdmin, async (req, res, next) => {
-  await ventasController.createVenta(req, res, next);
+  await ventasController.createVentaAdmin(req, res, next);
 });
 
 router.put('/:id', authenticateToken, isAdmin, async (req, res, next) => {
