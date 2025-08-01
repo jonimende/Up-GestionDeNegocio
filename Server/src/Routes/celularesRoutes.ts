@@ -1,6 +1,7 @@
 // routes/celulares.ts
 import { Router } from "express";
 import { Celular } from "../Models/Celulares";
+import { Proveedor } from "../Models/Proveedores";
 import { authenticateToken } from "../Middlewares/authMiddlewares";
 import { isAdmin } from "../Middlewares/isAdmin";
 
@@ -9,7 +10,15 @@ const router = Router();
 // GET - obtener todos los celulares
 router.get("/", authenticateToken, async (req, res) => {
   try {
-    const celulares = await Celular.findAll();
+    const celulares = await Celular.findAll({
+      include: [
+        {
+          model: Proveedor,
+          as: "proveedor", // alias que tengas definido en el modelo
+          attributes: ["id", "nombre"], // solo los campos necesarios
+        },
+      ],
+    });
     res.json(celulares);
   } catch (error) {
     console.error("Error en GET /celulares:", error);
@@ -21,18 +30,34 @@ router.get("/disponibles", async (req, res) => {
   try {
     const disponibles = await Celular.findAll({
       where: { vendido: false },
+      include: [
+        {
+          model: Proveedor,
+          as: 'proveedor',
+          attributes: ["id", "nombre"], // Trae solo lo necesario
+        },
+      ],
     });
+
     res.json(disponibles);
   } catch (error) {
+    console.error("Error al obtener celulares disponibles:", error);
     res.status(500).json({ error: "Error al obtener celulares disponibles" });
   }
 });
 
-// GET - obtener un celular por ID
 router.get("/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const celular = await Celular.findByPk(id);
+    const celular = await Celular.findByPk(id, {
+      include: [
+        {
+          model: Proveedor,
+          as: "proveedor",
+          attributes: ["id", "nombre"],
+        },
+      ],
+    });
     if (!celular) {
       return res.status(404).json({ message: "Celular no encontrado" });
     }

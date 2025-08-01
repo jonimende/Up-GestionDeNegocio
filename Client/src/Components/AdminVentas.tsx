@@ -24,6 +24,7 @@ interface Venta {
     observaciones?: string;
     imei?: string;
     fechaIngreso?: string;
+    idProveedor?: number | null;
   };
   Accesorios?: {
     nombre?: string;
@@ -141,13 +142,6 @@ const AdminVentas: React.FC = () => {
       return "El total debe ser mayor a 0";
     }
 
-    if (
-      form.proveedorId === null ||
-      form.proveedorId === undefined ||
-      form.proveedorId === null
-    )
-      return "Debe seleccionar un proveedor";
-
     if (form.metodoPago && !METODOS_PAGO.includes(form.metodoPago))
       return "Método de pago inválido";
 
@@ -176,8 +170,7 @@ const AdminVentas: React.FC = () => {
       reparacionDescripcion: venta.Reparacion?.descripcion ?? "",
       reparadoPor: venta.Reparacion?.reparadoPor ?? "",
 
-      proveedorId: venta.Proveedor?.id ?? null,
-      proveedorNombre: venta.Proveedor?.nombre ?? "",
+      proveedorId: venta.Celular?.idProveedor ?? null,
 
       metodoPago: venta.metodoPago ?? "",
     });
@@ -215,14 +208,8 @@ const AdminVentas: React.FC = () => {
     try {
       const dataToSend = {
         ...form,
-        idProveedor: form.proveedorId ?? null,
       };
-      if ("proveedorNombre" in dataToSend) {
-        delete dataToSend.proveedorNombre;
-      }
-      if ("proveedorId" in dataToSend) {
-        delete dataToSend.proveedorId;
-      }
+      delete dataToSend.proveedorNombre;
 
       await axios.put(`http://localhost:3001/ventas/${editandoId}`, dataToSend, {
         headers: { Authorization: `Bearer ${token}` },
@@ -234,7 +221,12 @@ const AdminVentas: React.FC = () => {
             ? {
                 ...v,
                 ...form,
-                Proveedor: proveedores.find((p) => p.id === form.proveedorId) ?? undefined,
+                Celular: {
+                  ...v.Celular,
+                  idProveedor: form.proveedorId ?? v.Celular?.idProveedor ?? null,
+                },
+                Proveedor:
+                  proveedores.find((p) => p.id === form.proveedorId) ?? undefined,
               }
             : v
         )
@@ -426,18 +418,11 @@ const AdminVentas: React.FC = () => {
                   />
                 </td>
                 <td>
-                  <select
-                    name="proveedorId"
-                    value={form.proveedorId ?? ""}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">-- Seleccionar Proveedor --</option>
-                    {proveedores.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre}
-                      </option>
-                    ))}
-                  </select>
+                  {proveedores.find(
+                    (p) =>
+                      p.id === form.proveedorId ||
+                      p.id === venta.Celular?.idProveedor
+                  )?.nombre ?? "-"}
                 </td>
                 <td>
                   <input
@@ -485,7 +470,11 @@ const AdminVentas: React.FC = () => {
                 <td>{venta.Reparacion?.reparadoPor ?? "-"}</td>
                 <td>{venta.comprador ?? "-"}</td>
                 <td>{venta.ganancia ?? "-"}</td>
-                <td>{venta.Proveedor?.nombre ?? "-"}</td>
+                <td>
+                  {proveedores.find(
+                    (p) => p.id === venta.Proveedor?.id || p.id === venta.Celular?.idProveedor
+                  )?.nombre ?? "-"}
+                </td>
                 <td>
                   {venta.Celular?.fechaIngreso
                     ? new Date(venta.Celular.fechaIngreso).toLocaleDateString()

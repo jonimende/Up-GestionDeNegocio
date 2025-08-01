@@ -200,19 +200,50 @@ getVentaById: async (req: Request, res: Response, next: NextFunction) => {
     const venta = await Venta.findByPk(id);
     if (!venta) return res.status(404).json({ error: 'Venta no encontrada' });
 
-    // Actualizar venta
-    await venta.update(req.body, { transaction: t });
+    // Campos para actualizar en Venta
+    const { cantidad, total, fecha, celularId, accesorioId, reparacionId, metodoPago, descuento } = req.body;
 
-    // Si es una venta con celular, actualizamos el celular también
+    await venta.update({
+      ...(cantidad !== undefined && { cantidad }),
+      ...(total !== undefined && { total }),
+      ...(fecha !== undefined && { fecha }),
+      ...(celularId !== undefined && { celularId }),
+      ...(accesorioId !== undefined && { accesorioId }),
+      ...(reparacionId !== undefined && { reparacionId }),
+      ...(metodoPago !== undefined && { metodoPago }),
+      ...(descuento !== undefined && { descuento }),
+    }, { transaction: t });
+
+    // Actualizar datos de Celular solo si la venta tiene celularId
     if (venta.celularId) {
       const celular = await Celular.findByPk(venta.celularId, { transaction: t });
       if (celular) {
-        const { comprador, ganancia, idProveedor, fechaVenta } = req.body;
+        // Extraemos los campos planos que vienen en req.body, no el objeto Celular completo
+        const {
+          comprador,
+          ganancia,
+          idProveedor,
+          fechaVenta,
+          modelo,
+          almacenamiento,
+          bateria,
+          color,
+          precio,
+          imei,
+          observaciones,
+        } = req.body;
 
         if (comprador !== undefined) celular.comprador = comprador;
         if (ganancia !== undefined) celular.ganancia = ganancia;
-        if (idProveedor !== undefined) celular.idProveedor = idProveedor;
+        if (idProveedor !== undefined && idProveedor !== null) celular.idProveedor = idProveedor;
         if (fechaVenta !== undefined) celular.fechaVenta = fechaVenta;
+        if (modelo !== undefined) celular.modelo = modelo;
+        if (almacenamiento !== undefined) celular.almacenamiento = almacenamiento;
+        if (bateria !== undefined) celular.bateria = bateria;
+        if (color !== undefined) celular.color = color;
+        if (precio !== undefined) celular.precio = precio;
+        if (imei !== undefined) celular.imei = imei;
+        if (observaciones !== undefined) celular.observaciones = observaciones;
 
         await celular.save({ transaction: t });
       }
@@ -225,6 +256,8 @@ getVentaById: async (req: Request, res: Response, next: NextFunction) => {
     next(error);
   }
 },
+
+
 
 
   deleteVenta: async (req: Request, res: Response, next: NextFunction) => {
