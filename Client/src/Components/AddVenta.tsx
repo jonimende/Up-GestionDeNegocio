@@ -33,6 +33,7 @@ interface Celular {
 interface Item {
   id: number;
   nombre: string;
+  precio?: number; // para accesorios, opcional
 }
 
 interface Reparacion {
@@ -68,6 +69,7 @@ const AddVenta: React.FC = () => {
     observaciones: '',
     imei: '',
     proveedorId: null,
+    fechaIngreso: null,
   });
 
   const [selectedAccesorio, setSelectedAccesorio] = useState<number | ''>('');
@@ -87,7 +89,9 @@ const AddVenta: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Función para recargar listas después de agregar venta
+  const [showDescuento, setShowDescuento] = useState(false);
+  const [porcentajeDescuento, setPorcentajeDescuento] = useState<number>(0);
+
   const refetchLists = async () => {
     try {
       const token = localStorage.getItem('token') || '';
@@ -107,7 +111,6 @@ const AddVenta: React.FC = () => {
     }
   };
 
-  // Carga inicial y detección de admin
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -123,7 +126,6 @@ const AddVenta: React.FC = () => {
           axios.get<Reparacion[]>('http://localhost:3001/reparaciones', config),
           axios.get<Proveedor[]>('http://localhost:3001/proveedores', config),
         ]);
-        console.log('Proveedores cargados:', provRes.data);
         setCelulares(celRes.data);
         setAccesorios(accRes.data);
         setReparaciones(repRes.data);
@@ -135,7 +137,6 @@ const AddVenta: React.FC = () => {
     fetchData();
   }, []);
 
-  // Cuando se selecciona un celular, actualizar datos y proveedor asociado automáticamente
   const handleCelularSelect = (value: Celular | null) => {
     if (value) {
       setSelectedCelularId(value.id);
@@ -148,6 +149,7 @@ const AddVenta: React.FC = () => {
         observaciones: value.observaciones || '',
         imei: value.imei || '',
         proveedorId: value.proveedorId || null,
+        fechaIngreso: value.fechaIngreso || null,
       });
       setFechaIngreso(value.fechaIngreso ? value.fechaIngreso.substring(0, 10) : '');
       setFechaVenta(new Date().toISOString().substring(0, 10));
@@ -156,6 +158,7 @@ const AddVenta: React.FC = () => {
       } else {
         setImei('');
       }
+      setTotal(value.precio * cantidad);
     } else {
       setSelectedCelularId('');
       setCelularData({
@@ -167,14 +170,32 @@ const AddVenta: React.FC = () => {
         observaciones: '',
         imei: '',
         proveedorId: null,
+        fechaIngreso: null,
       });
       setFechaIngreso('');
       setFechaVenta('');
       setImei('');
+      setTotal('');
     }
   };
 
-  // Submit del formulario
+  useEffect(() => {
+    let precioCelular = 0;
+    if (selectedCelularId !== '') {
+      const celular = celulares.find(c => c.id === selectedCelularId);
+      if (celular) precioCelular = celular.precio;
+    }
+
+    let precioAccesorio = 0;
+    if (selectedAccesorio !== '') {
+      const accesorio = accesorios.find(a => a.id === selectedAccesorio);
+      if (accesorio && accesorio.precio) precioAccesorio = accesorio.precio;
+    }
+
+    const nuevoTotal = (precioCelular + precioAccesorio) * cantidad;
+    setTotal(nuevoTotal);
+  }, [cantidad, selectedCelularId, selectedAccesorio, celulares, accesorios]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -188,10 +209,10 @@ const AddVenta: React.FC = () => {
       selectedReparacion === ''
     )
       return setError('Seleccione al menos un producto');
-    if (selectedCelularId === '' && !celularData.modelo)
+    if (selectedCelularId !== '' && !celularData.modelo)
       return setError('Complete los datos del celular');
     if (isAdmin && !comprador.trim()) return setError('Falta el comprador');
-    if (isAdmin && !imei.trim()) return setError('Falta el IMEI');
+    if (isAdmin && selectedCelularId !== '' && !imei.trim()) return setError('Falta el IMEI');
     if (!metodoPago.trim()) return setError('Falta el método de pago');
 
     setLoading(true);
@@ -219,7 +240,6 @@ const AddVenta: React.FC = () => {
       await refetchLists();
 
       setSuccess('Venta agregada correctamente');
-      // Resetear formulario
       setCantidad(1);
       setTotal('');
       setSelectedCelularId('');
@@ -234,6 +254,7 @@ const AddVenta: React.FC = () => {
         observaciones: '',
         imei: '',
         proveedorId: null,
+        fechaIngreso: null,
       });
       setComprador('');
       setGanancia('');
@@ -241,6 +262,8 @@ const AddVenta: React.FC = () => {
       setFechaVenta('');
       setImei('');
       setMetodoPago('');
+      setPorcentajeDescuento(0);
+      setShowDescuento(false);
     } catch (error: unknown) {
       if (isAxiosError(error)) {
         if (error.response?.status === 404) {
@@ -257,9 +280,19 @@ const AddVenta: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 6 }}>
+    <Container maxWidth="md" sx={{ mt: 6 }}>
       <Paper sx={{ p: 4 }}>
-        <Typography variant="h5" gutterBottom>
+        <Typography
+          variant="h4"
+          align="center"
+          gutterBottom
+          sx={{
+            fontWeight: '700',
+            fontFamily: "'Roboto Slab', serif",
+            color: '#3f51b5',
+            mb: 4,
+          }}
+        >
           Agregar Venta
         </Typography>
 
@@ -277,66 +310,79 @@ const AddVenta: React.FC = () => {
             isOptionEqualToValue={(option, value) => option.id === value.id}
             disabled={loading}
           />
-          <TextField
-            label="Modelo"
-            fullWidth
-            sx={{ mb: 2 }}
-            value={celularData.modelo}
-            onChange={(e) => setCelularData({ ...celularData, modelo: e.target.value })}
-          />
-          <TextField
-            label="Almacenamiento"
-            fullWidth
-            sx={{ mb: 2 }}
-            value={celularData.almacenamiento}
-            onChange={(e) => setCelularData({ ...celularData, almacenamiento: e.target.value })}
-          />
-          <TextField
-            label="Batería"
-            fullWidth
-            sx={{ mb: 2 }}
-            value={celularData.bateria}
-            onChange={(e) => setCelularData({ ...celularData, bateria: e.target.value })}
-          />
-          <TextField
-            label="Color"
-            fullWidth
-            sx={{ mb: 2 }}
-            value={celularData.color}
-            onChange={(e) => setCelularData({ ...celularData, color: e.target.value })}
-          />
-          <TextField
-            label="Precio"
-            type="number"
-            fullWidth
-            sx={{ mb: 2 }}
-            value={celularData.precio}
-            onChange={(e) => setCelularData({ ...celularData, precio: Number(e.target.value) })}
-          />
-          <TextField
-            label="Observaciones"
-            fullWidth
-            multiline
-            rows={2}
-            sx={{ mb: 2 }}
-            value={celularData.observaciones}
-            onChange={(e) => setCelularData({ ...celularData, observaciones: e.target.value })}
-          />
-
-          {/* Proveedor (solo lectura, muestra el nombre o texto si no hay) */}
-          <TextField
-            label="Proveedor"
-            fullWidth
-            sx={{ mb: 2 }}
-            value={
-              celularData.proveedorId
-                ? proveedores.find(p => p.id === celularData.proveedorId)?.nombre || ''
-                : 'Proveedor no seleccionado'
-            }
-            InputProps={{
-              readOnly: true,
+          <Box
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 2,
+              mb: 2,
+              ...(isAdmin && { justifyContent: 'space-between' }),
             }}
-          />
+          >
+            <TextField
+              label="Modelo"
+              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
+              value={celularData.modelo}
+              onChange={(e) => setCelularData({ ...celularData, modelo: e.target.value })}
+              disabled={loading}
+            />
+            <TextField
+              label="Almacenamiento"
+              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
+              value={celularData.almacenamiento}
+              onChange={(e) => setCelularData({ ...celularData, almacenamiento: e.target.value })}
+              disabled={loading}
+            />
+            <TextField
+              label="Batería"
+              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
+              value={celularData.bateria}
+              onChange={(e) => setCelularData({ ...celularData, bateria: e.target.value })}
+              disabled={loading}
+            />
+            <TextField
+              label="Color"
+              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
+              value={celularData.color}
+              onChange={(e) => setCelularData({ ...celularData, color: e.target.value })}
+              disabled={loading}
+            />
+            <TextField
+              label="Precio"
+              type="number"
+              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
+              value={celularData.precio}
+              onChange={(e) => setCelularData({ ...celularData, precio: Number(e.target.value) })}
+              disabled={loading}
+            />
+            <TextField
+              label="Observaciones"
+              multiline
+              rows={2}
+              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
+              value={celularData.observaciones}
+              onChange={(e) => setCelularData({ ...celularData, observaciones: e.target.value })}
+              disabled={loading}
+            />
+          </Box>
+
+          {/* Proveedor (solo lectura, solo para admin) */}
+          {isAdmin && (
+            <TextField
+              label="Proveedor"
+              fullWidth
+              sx={{ mb: 2 }}
+              value={
+                proveedores.length === 0
+                  ? 'Cargando proveedores...'
+                  : celularData.proveedorId
+                    ? proveedores.find(p => p.id === celularData.proveedorId)?.nombre || 'Proveedor no encontrado'
+                    : 'Proveedor no seleccionado'
+              }
+              InputProps={{ readOnly: true }}
+              disabled={loading}
+            />
+          )}
 
           {/* Accesorio */}
           <Autocomplete
@@ -364,22 +410,70 @@ const AddVenta: React.FC = () => {
           />
 
           {/* Cantidad y total */}
-          <TextField
-            label="Cantidad"
-            type="number"
-            fullWidth
-            sx={{ mb: 2 }}
-            value={cantidad}
-            onChange={(e) => setCantidad(Number(e.target.value))}
-          />
-          <TextField
-            label="Total"
-            type="number"
-            fullWidth
-            sx={{ mb: 3 }}
-            value={total}
-            onChange={(e) => setTotal(Number(e.target.value))}
-          />
+          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+            <TextField
+              label="Cantidad"
+              type="number"
+              sx={{ flex: 1 }}
+              value={cantidad}
+              onChange={(e) => setCantidad(Number(e.target.value))}
+              disabled={loading}
+            />
+            <TextField
+              label="Total"
+              type="number"
+              sx={{ flex: 1 }}
+              value={total}
+              onChange={(e) => setTotal(Number(e.target.value))}
+              disabled={loading}
+            />
+          </Box>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+            <Button
+              variant="outlined"
+              onClick={() => setShowDescuento(!showDescuento)}
+              sx={{ flex: '1 1 30%' }}
+              disabled={loading}
+            >
+              {showDescuento ? 'Cancelar Descuento' : 'Agregar Descuento'}
+            </Button>
+
+            {showDescuento && (
+              <>
+                <TextField
+                  label="Descuento (%)"
+                  type="number"
+                  sx={{ flex: '1 1 30%' }}
+                  value={porcentajeDescuento}
+                  onChange={(e) => setPorcentajeDescuento(Number(e.target.value))}
+                  disabled={loading}
+                />
+                <Box sx={{ flex: '1 1 30%', display: 'flex', alignItems: 'center' }}>
+                  <Typography>
+                    Nuevo Total: ${total && porcentajeDescuento
+                      ? (total - (total * (porcentajeDescuento / 100))).toFixed(2)
+                      : total}
+                  </Typography>
+                </Box>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={() => {
+                    if (total && porcentajeDescuento >= 0) {
+                      const nuevoTotal = total - (total * (porcentajeDescuento / 100));
+                      setTotal(Number(nuevoTotal.toFixed(2)));
+                      setShowDescuento(false);
+                      setPorcentajeDescuento(0);
+                    }
+                  }}
+                  sx={{ flex: '1 1 30%' }}
+                  disabled={loading || !porcentajeDescuento}
+                >
+                  Aplicar Descuento
+                </Button>
+              </>
+            )}
+          </Box>
 
           {/* Admin: IMEI */}
           {isAdmin && (
@@ -389,6 +483,7 @@ const AddVenta: React.FC = () => {
               sx={{ mb: 2 }}
               value={imei}
               onChange={(e) => setImei(e.target.value)}
+              disabled={loading}
             />
           )}
 
@@ -408,43 +503,50 @@ const AddVenta: React.FC = () => {
             </Select>
           </FormControl>
 
-          {/* Campos admin */}
+          {/* Campos admin en dos columnas */}
           {isAdmin && (
-            <>
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 2,
+                mb: 3,
+              }}
+            >
               <TextField
                 label="Comprador"
-                fullWidth
-                sx={{ mb: 2 }}
+                sx={{ flex: '0 0 48%' }}
                 value={comprador}
                 onChange={(e) => setComprador(e.target.value)}
+                disabled={loading}
               />
               <TextField
                 label="Ganancia"
                 type="number"
-                fullWidth
-                sx={{ mb: 2 }}
+                sx={{ flex: '0 0 48%' }}
                 value={ganancia}
                 onChange={(e) => setGanancia(Number(e.target.value))}
+                disabled={loading}
               />
               <TextField
                 label="Fecha Ingreso"
                 type="date"
-                fullWidth
-                sx={{ mb: 2 }}
+                sx={{ flex: '0 0 48%' }}
                 value={fechaIngreso}
                 onChange={(e) => setFechaIngreso(e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                disabled={loading}
               />
               <TextField
                 label="Fecha Venta"
                 type="date"
-                fullWidth
-                sx={{ mb: 3 }}
+                sx={{ flex: '0 0 48%' }}
                 value={fechaVenta}
                 onChange={(e) => setFechaVenta(e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                disabled={loading}
               />
-            </>
+            </Box>
           )}
 
           <Button type="submit" variant="contained" fullWidth disabled={loading}>

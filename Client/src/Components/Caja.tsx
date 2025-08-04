@@ -2,7 +2,15 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import {
-  Box, Typography, Select, MenuItem, FormControl, InputLabel, Button, Paper,
+  Box,
+  Typography,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Button,
+  Paper,
+  CircularProgress,
 } from "@mui/material";
 
 interface DecodedToken {
@@ -34,9 +42,16 @@ const Caja = () => {
       });
       setTotal(res.data.total);
       setCantidad(res.data.cantidad);
-    } catch (err) {
-      setError("Error al obtener la caja");
-      console.error(err);
+      setError(null);
+    } catch (err: unknown) {
+      const error = err as any;
+      if (error?.isAxiosError) {
+        console.error("Axios error:", error.response?.data || error.message);
+        setError(error.response?.data?.error || "Error desde el servidor");
+      } else {
+        console.error("Error inesperado:", error);
+        setError("Ocurrió un error inesperado.");
+      }
     }
   };
 
@@ -72,32 +87,55 @@ const Caja = () => {
 
   if (!isAdmin) {
     return (
-      <div className="p-6 text-center text-red-600 font-semibold">
+      <Typography color="error" align="center" sx={{ mt: 6 }}>
         Acceso denegado
-      </div>
+      </Typography>
     );
   }
 
   if (loading) {
-    return <div className="p-6 text-center">Cargando caja...</div>;
+    return (
+      <Box textAlign="center" mt={6}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
-    <Paper elevation={3} sx={{ p: 3, maxWidth: 500, margin: "auto" }}>
-      <Typography variant="h5" gutterBottom>
+    <Paper
+      elevation={3}
+      sx={{
+        p: 4,
+        maxWidth: 600,
+        mx: "auto",
+        mt: 5,
+        borderRadius: 3,
+        fontFamily: "'Roboto', sans-serif",
+      }}
+    >
+      <Typography
+        variant="h5"
+        gutterBottom
+        align="center"
+        sx={{ color: "#1565c0", fontWeight: "bold" }}
+      >
         Caja {tipo === "diaria" ? "Diaria" : "Mensual"}
       </Typography>
 
       {error && (
-        <Typography color="error" variant="body2" sx={{ mb: 2 }}>
+        <Typography color="error" variant="body2" align="center" sx={{ mb: 2 }}>
           {error}
         </Typography>
       )}
 
-      <Box display="flex" gap={2} mt={2}>
+      <Box display="flex" gap={2} mt={3}>
         <FormControl fullWidth>
           <InputLabel>Tipo</InputLabel>
-          <Select value={tipo} label="Tipo" onChange={e => setTipo(e.target.value as any)}>
+          <Select
+            value={tipo}
+            label="Tipo"
+            onChange={(e) => setTipo(e.target.value as any)}
+          >
             <MenuItem value="diaria">Diaria</MenuItem>
             <MenuItem value="mensual">Mensual</MenuItem>
           </Select>
@@ -105,7 +143,11 @@ const Caja = () => {
 
         <FormControl fullWidth>
           <InputLabel>Método de Pago</InputLabel>
-          <Select value={metodoPago} label="Método de Pago" onChange={e => setMetodoPago(e.target.value as any)}>
+          <Select
+            value={metodoPago}
+            label="Método de Pago"
+            onChange={(e) => setMetodoPago(e.target.value as any)}
+          >
             <MenuItem value="Todos">Todos</MenuItem>
             <MenuItem value="Efectivo">Efectivo</MenuItem>
             <MenuItem value="Transferencia">Transferencia</MenuItem>
@@ -114,11 +156,15 @@ const Caja = () => {
       </Box>
 
       <Box mt={4}>
-        <Typography variant="h6">Total generado: ${total.toFixed(2)}</Typography>
-        <Typography variant="subtitle1">Ventas realizadas: {cantidad}</Typography>
+        <Typography variant="h6" align="center">
+          Total generado: <strong>${total.toFixed(2)}</strong>
+        </Typography>
+        <Typography variant="subtitle1" align="center">
+          Ventas realizadas: {cantidad}
+        </Typography>
       </Box>
 
-      <Box mt={2}>
+      <Box display="flex" justifyContent="center" mt={4}>
         <Button variant="contained" color="primary" onClick={obtenerCaja}>
           Actualizar
         </Button>

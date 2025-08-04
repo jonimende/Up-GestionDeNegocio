@@ -26,7 +26,7 @@ router.get("/", authenticateToken, async (req, res) => {
   }
 });
 
-router.get("/disponibles", async (req, res) => {
+router.get("/disponibles",authenticateToken, async (req, res) => {
   try {
     const disponibles = await Celular.findAll({
       where: { vendido: false },
@@ -34,17 +34,27 @@ router.get("/disponibles", async (req, res) => {
         {
           model: Proveedor,
           as: 'proveedor',
-          attributes: ["id", "nombre"], // Trae solo lo necesario
+          attributes: ["id", "nombre"],
         },
       ],
     });
 
-    res.json(disponibles);
+    // Convertir a JSON y agregar proveedorId en cada celular
+    const celularesConProveedorId = disponibles.map(celular => {
+      const c = celular.toJSON();
+      return {
+        ...c,
+        proveedorId: c.proveedor ? c.proveedor.id : null,
+      };
+    });
+
+    res.json(celularesConProveedorId);
   } catch (error) {
     console.error("Error al obtener celulares disponibles:", error);
     res.status(500).json({ error: "Error al obtener celulares disponibles" });
   }
 });
+
 
 router.get("/:id", authenticateToken, async (req, res) => {
   try {
