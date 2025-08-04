@@ -1,4 +1,16 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import {
+  Box,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Typography,
+  Alert,
+  SelectChangeEvent,
+} from "@mui/material";
 
 // Tipos
 type Reparacion = {
@@ -35,9 +47,8 @@ type CelularForm = {
 type AccesorioForm = {
   nombre: string;
   stock: string;
+  precio: string;
 };
-
-const inputClass = "w-full border border-gray-300 rounded px-3 py-2";
 
 const AddStock: React.FC<Props> = ({ onClose }) => {
   const [tipo, setTipo] = useState<null | "celular" | "accesorio">(null);
@@ -63,6 +74,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
   const [accesorioForm, setAccesorioForm] = useState<AccesorioForm>({
     nombre: "",
     stock: "",
+    precio: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -76,14 +88,11 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     }
   }, [successMsg]);
 
-  // Carga reparaciones con token en header
   useEffect(() => {
     const token = localStorage.getItem("token") || "";
 
     fetch("http://localhost:3001/reparaciones", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
         if (!res.ok) throw new Error("Error al cargar reparaciones");
@@ -96,14 +105,11 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
       });
   }, []);
 
-  // Carga proveedores con token en header
   useEffect(() => {
     const token = localStorage.getItem("token") || "";
 
     fetch("http://localhost:3001/proveedores", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
         if (!res.ok) throw new Error("Error al cargar proveedores");
@@ -116,8 +122,9 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
       });
   }, []);
 
+  // Manejador para inputs tipo texto, number y textarea
   const handleCelularChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
 
@@ -135,6 +142,27 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
 
       const precioValido = !isNaN(precioNum) ? precioNum : 0;
 
+      updated.valorFinal = (precioValido + valorReparacion).toFixed(2);
+
+      return updated;
+    });
+  };
+
+  // Manejador para selects (MUI) - tiene tipo específico SelectChangeEvent<string>
+  const handleCelularSelectChange = (e: SelectChangeEvent<string>) => {
+    const { name, value } = e.target;
+    setCelularForm((prev) => {
+      let updated = { ...prev, [name]: value };
+
+      const precioNum = name === "precio" ? parseFloat(value) : parseFloat(prev.precio);
+      const reparacion = reparaciones.find(
+        (r) =>
+          (name === "idReparacion" ? value : prev.idReparacion.toString()) ===
+          r.id.toString()
+      );
+      const valorReparacion = reparacion ? reparacion.valor : 0;
+
+      const precioValido = !isNaN(precioNum) ? precioNum : 0;
       updated.valorFinal = (precioValido + valorReparacion).toFixed(2);
 
       return updated;
@@ -214,8 +242,6 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         imei,
       };
 
-      console.log("Enviando celular:", body);
-
       const res = await fetch("http://localhost:3001/celulares", {
         method: "POST",
         headers: {
@@ -259,24 +285,26 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     setError(null);
     setSuccessMsg(null);
 
-    const { nombre, stock } = accesorioForm;
+    const { nombre, stock, precio } = accesorioForm;
 
-    if (!nombre.trim() || !stock) {
+    if (!nombre.trim() || !stock || !precio) {
       setError("Por favor, completa todos los campos obligatorios (*)");
       return;
     }
 
-    if (parseInt(stock) < 0) {
-      setError("El stock debe ser mayor o igual a cero");
+    if (parseInt(stock) < 0 || parseFloat(precio) < 0) {
+      setError("Los valores numéricos deben ser mayores o iguales a cero");
       return;
     }
 
     setLoading(true);
     try {
       const token = localStorage.getItem("token") || "";
-      const body = { nombre, stock: parseInt(stock) };
-
-      console.log("Enviando accesorio:", body);
+      const body = {
+        nombre,
+        stock: parseInt(stock),
+        precio: parseFloat(precio),
+      };
 
       const res = await fetch("http://localhost:3001/accesorios", {
         method: "POST",
@@ -293,7 +321,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
       }
 
       setSuccessMsg("Accesorio agregado con éxito");
-      setAccesorioForm({ nombre: "", stock: "" });
+      setAccesorioForm({ nombre: "", stock: "", precio: "" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error inesperado";
       setError(msg);
@@ -308,27 +336,34 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
   };
 
   return (
-    <div className="max-w-lg mx-auto p-4 border rounded shadow">
+    <Box maxWidth={600} mx="auto" p={3} border={1} borderRadius={2} borderColor="grey.300" boxShadow={1}>
       {!tipo ? (
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-6">Agregar Stock</h2>
-          <button
+        <Box textAlign="center">
+          <Typography variant="h5" fontWeight="bold" mb={3}>
+            Agregar Stock
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
             onClick={() => setTipo("celular")}
-            className="mr-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            sx={{ mr: 2 }}
           >
             Agregar Celular
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="contained"
+            color="secondary"
             onClick={() => setTipo("accesorio")}
-            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
           >
             Agregar Accesorio
-          </button>
-        </div>
+          </Button>
+        </Box>
       ) : tipo === "celular" ? (
         <>
-          <h2 className="text-xl font-semibold mb-4">Agregar Celular</h2>
-          <form onSubmit={submitCelular} className="space-y-4">
+          <Typography variant="h6" fontWeight="bold" mb={2}>
+            Agregar Celular
+          </Typography>
+          <Box component="form" onSubmit={submitCelular} noValidate sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {[
               "modelo",
               "almacenamiento",
@@ -339,7 +374,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
               "fechaIngreso",
               "stock",
             ].map((field) => (
-              <input
+              <TextField
                 key={field}
                 type={
                   field === "fechaIngreso"
@@ -349,143 +384,160 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
                     : "text"
                 }
                 name={field}
-                placeholder={`${field.charAt(0).toUpperCase() + field.slice(1)} *`}
+                label={`${field.charAt(0).toUpperCase() + field.slice(1)} *`}
                 value={celularForm[field as keyof CelularForm] as string}
                 onChange={handleCelularChange}
-                className={inputClass}
                 required
-                min={["precio", "costo", "stock"].includes(field) ? 0 : undefined}
-                step={["precio", "costo"].includes(field) ? "0.01" : undefined}
+                inputProps={{
+                  min: ["precio", "costo", "stock"].includes(field) ? 0 : undefined,
+                  step: ["precio", "costo"].includes(field) ? "0.01" : undefined,
+                }}
               />
             ))}
 
-            {/* Input IMEI */}
-            <input
-              type="text"
+            <TextField
+              label="IMEI *"
               name="imei"
-              placeholder="IMEI *"
               value={celularForm.imei}
               onChange={handleCelularChange}
-              className={inputClass}
               required
             />
 
-            <label htmlFor="idProveedor" className="block font-semibold">
-              Proveedor *
-            </label>
-            <select
-              id="idProveedor"
-              name="idProveedor"
-              value={celularForm.idProveedor}
-              onChange={handleCelularChange}
-              className={inputClass}
-              required
-            >
-              <option value="">-- Seleccione un proveedor --</option>
-              {proveedores.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombre}
-                </option>
-              ))}
-            </select>
+            <FormControl fullWidth>
+              <InputLabel id="proveedor-label">Proveedor *</InputLabel>
+              <Select
+                labelId="proveedor-label"
+                id="idProveedor"
+                name="idProveedor"
+                value={celularForm.idProveedor.toString()}
+                label="Proveedor *"
+                onChange={handleCelularSelectChange}
+                required
+              >
+                <MenuItem value="">
+                  <em>-- Seleccione un proveedor --</em>
+                </MenuItem>
+                {proveedores.map((p) => (
+                  <MenuItem key={p.id} value={p.id.toString()}>
+                    {p.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-            <textarea
+            <TextField
+              label="Observaciones"
               name="observaciones"
-              placeholder="Observaciones"
               value={celularForm.observaciones}
               onChange={handleCelularChange}
-              className={inputClass}
+              multiline
               rows={3}
             />
 
-            <label htmlFor="idReparacion" className="block font-semibold">
-              Reparación (opcional)
-            </label>
-            <select
-              id="idReparacion"
-              name="idReparacion"
-              value={celularForm.idReparacion}
-              onChange={handleCelularChange}
-              className={inputClass}
-            >
-              <option value="">-- Seleccione una reparación --</option>
-              {reparaciones.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.descripcion} (Valor: ${r.valor.toFixed(2)})
-                </option>
-              ))}
-            </select>
+            <FormControl fullWidth>
+              <InputLabel id="reparacion-label">Reparación (opcional)</InputLabel>
+              <Select
+                labelId="reparacion-label"
+                id="idReparacion"
+                name="idReparacion"
+                value={celularForm.idReparacion.toString()}
+                label="Reparación (opcional)"
+                onChange={handleCelularSelectChange}
+              >
+                <MenuItem value="">
+                  <em>-- Seleccione una reparación --</em>
+                </MenuItem>
+                {reparaciones.map((r) => (
+                  <MenuItem key={r.id} value={r.id.toString()}>
+                    {r.descripcion} (Valor: ${r.valor.toFixed(2)})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-            <div>
-              <label className="block font-semibold mt-2">Total (Precio + Reparación)</label>
-              <input
-                type="text"
-                readOnly
-                value={celularForm.valorFinal}
-                className={inputClass + " bg-gray-200 cursor-not-allowed"}
-              />
-            </div>
+            <TextField
+              label="Total (Precio + Reparación)"
+              value={celularForm.valorFinal}
+              InputProps={{
+                readOnly: true,
+              }}
+              sx={{ bgcolor: "grey.200", cursor: "not-allowed" }}
+            />
 
-            {error && <p className="text-red-600 font-semibold">{error}</p>}
-            {successMsg && <p className="text-green-600 font-semibold">{successMsg}</p>}
+            {error && <Alert severity="error">{error}</Alert>}
+            {successMsg && <Alert severity="success">{successMsg}</Alert>}
 
-            <button
+            <Button
               type="submit"
+              variant="contained"
+              color="success"
               disabled={loading}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded mt-2"
+              sx={{ mt: 2 }}
             >
               {loading ? "Guardando..." : "Guardar Celular"}
-            </button>
-          </form>
+            </Button>
+          </Box>
         </>
       ) : (
         <>
-          <h2 className="text-xl font-semibold mb-4">Agregar Accesorio</h2>
-          <form onSubmit={submitAccesorio} className="space-y-4">
-            <input
-              type="text"
+          <Typography variant="h6" fontWeight="bold" mb={2}>
+            Agregar Accesorio
+          </Typography>
+          <Box component="form" onSubmit={submitAccesorio} noValidate sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              label="Nombre *"
               name="nombre"
-              placeholder="Nombre *"
               value={accesorioForm.nombre}
               onChange={handleAccesorioChange}
-              className={inputClass}
               required
             />
-            <input
-              type="number"
+            <TextField
+              label="Stock *"
               name="stock"
-              placeholder="Stock *"
+              type="number"
               value={accesorioForm.stock}
               onChange={handleAccesorioChange}
-              className={inputClass}
-              min={0}
+              inputProps={{ min: 0 }}
+              required
+            />
+            <TextField
+              label="Precio *"
+              name="precio"
+              type="number"
+              value={accesorioForm.precio}
+              onChange={handleAccesorioChange}
+              inputProps={{ min: 0, step: "0.01" }}
               required
             />
 
-            {error && <p className="text-red-600 font-semibold">{error}</p>}
-            {successMsg && <p className="text-green-600 font-semibold">{successMsg}</p>}
+            {error && <Alert severity="error">{error}</Alert>}
+            {successMsg && <Alert severity="success">{successMsg}</Alert>}
 
-            <button
+            <Button
               type="submit"
+              variant="contained"
+              color="success"
               disabled={loading}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded mt-2"
+              sx={{ mt: 2 }}
             >
               {loading ? "Guardando..." : "Guardar Accesorio"}
-            </button>
-          </form>
+            </Button>
+          </Box>
         </>
       )}
 
       {tipo && (
-        <button
+        <Button
           onClick={handleCerrar}
-          className="mt-6 underline text-sm text-gray-600 hover:text-gray-900"
+          sx={{ mt: 4, textDecoration: "underline", fontSize: "0.875rem" }}
+          variant="text"
+          color="inherit"
           type="button"
         >
           Cerrar / Volver
-        </button>
+        </Button>
       )}
-    </div>
+    </Box>
   );
 };
 

@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import {
   TextField,
   Button,
   Paper,
   Typography,
   CircularProgress,
+  Alert,
+  Box,
 } from '@mui/material';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
@@ -14,47 +16,58 @@ interface DecodedToken {
   rol?: string;
 }
 
-const AddReparacion = () => {
+const AddReparacion: React.FC = () => {
   const [descripcion, setDescripcion] = useState('');
   const [valor, setValor] = useState('');
   const [reparadoPor, setReparadoPor] = useState('');
-  const [mensaje, setMensaje] = useState('');
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [submitLoading, setSubmitLoading] = useState(false);
 
   useEffect(() => {
-    const verificarAdminYObtenerCaja = async () => {
+    const verificarAdmin = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         setIsAdmin(false);
         setLoading(false);
         return;
       }
-
       try {
         const decoded = jwtDecode<DecodedToken>(token);
-        if (!decoded.admin) {
-          setIsAdmin(false);
-          setLoading(false);
-          return;
-        }
-        setIsAdmin(true);
-        // await obtenerCaja(); // si necesitás llamar algo más
-      } catch (error) {
-        console.error('Error verificando admin:', error);
+        setIsAdmin(!!decoded.admin);
+      } catch {
         setIsAdmin(false);
       } finally {
         setLoading(false);
       }
     };
-
-    verificarAdminYObtenerCaja();
+    verificarAdmin();
   }, []);
 
   const handleSubmit = async () => {
+    setMensaje(null);
+    setError(null);
+
+    // Validaciones simples
+    if (!descripcion.trim()) {
+      setError('La descripción es obligatoria.');
+      return;
+    }
+    if (!valor || isNaN(Number(valor)) || Number(valor) < 0) {
+      setError('El valor debe ser un número válido mayor o igual a cero.');
+      return;
+    }
+    if (!reparadoPor.trim()) {
+      setError('El campo "Reparado Por" es obligatorio.');
+      return;
+    }
+
+    setSubmitLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(
+      await axios.post(
         'http://localhost:3001/reparaciones',
         {
           descripcion,
@@ -62,68 +75,106 @@ const AddReparacion = () => {
           reparadoPor,
         },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-
       setMensaje('Reparación agregada con éxito');
       setDescripcion('');
       setValor('');
       setReparadoPor('');
-    } catch (error) {
-      console.error(error);
-      setMensaje('Error al agregar reparación');
+    } catch (err) {
+      console.error(err);
+      setError('Error al agregar reparación');
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
   if (loading) {
-    return <CircularProgress />;
+    return (
+      <Typography align="center" sx={{ mt: 4 }}>
+        <CircularProgress />
+      </Typography>
+    );
   }
 
   if (!isAdmin) {
     return (
-      <Typography variant="h6" color="error" style={{ margin: 20 }}>
+      <Typography
+        variant="h6"
+        color="error"
+        align="center"
+        sx={{ mt: 4 }}
+      >
         No estás autorizado para agregar reparaciones.
       </Typography>
     );
   }
 
   return (
-    <Paper style={{ padding: 20, margin: 20 }}>
-      <Typography variant="h6">Agregar Reparación</Typography>
+    <Paper
+  elevation={4}
+  sx={{
+    p: 4,
+    maxWidth: 600,
+    mx: 'auto',
+    mt: 4,
+    fontFamily: 'Roboto, sans-serif',
+  }}
+>
+  <Typography
+    variant="h5"
+    gutterBottom
+    sx={{
+      color: '#1565c0', // azul fuerte (MUI blue[800])
+      fontWeight: 600,
+      fontFamily: 'Roboto, sans-serif',
+      textAlign: 'center',
+    }}
+  >
+    Agregar Reparación
+  </Typography>
+
       <TextField
         label="Descripción"
         fullWidth
         margin="normal"
         value={descripcion}
-        onChange={(e) => setDescripcion(e.target.value)}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setDescripcion(e.target.value)}
       />
       <TextField
         label="Valor"
         type="number"
         fullWidth
         margin="normal"
+        inputProps={{ min: 0, step: 0.01 }}
         value={valor}
-        onChange={(e) => setValor(e.target.value)}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setValor(e.target.value)}
       />
       <TextField
         label="Reparado Por"
         fullWidth
         margin="normal"
         value={reparadoPor}
-        onChange={(e) => setReparadoPor(e.target.value)}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setReparadoPor(e.target.value)}
       />
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleSubmit}
-        style={{ marginTop: 16 }}
-      >
+
+      {error && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {error}
+        </Alert>
+      )}
+      {mensaje && (
+        <Alert severity="success" sx={{ mt: 2 }}>
+          {mensaje}
+        </Alert>
+      )}
+
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+        <Button variant="contained" color="primary" onClick={handleSubmit}>
         Guardar
-      </Button>
-      {mensaje && <Typography style={{ marginTop: 10 }}>{mensaje}</Typography>}
+        </Button>
+      </Box>
     </Paper>
   );
 };

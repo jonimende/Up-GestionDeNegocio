@@ -7,7 +7,7 @@ import { Proveedor } from '../Models/Proveedores';
 import sequelize from '../db';
 
 export const ventasController = {
-  getVentas: async (req: Request, res: Response, next: NextFunction) => {
+ getVentas: async (req: Request, res: Response, next: NextFunction) => {
   try {
     const ventas = await Venta.findAll({
       include: [
@@ -39,26 +39,28 @@ export const ventasController = {
             },
             {
               model: Proveedor,
-              as: "proveedor",  // importante usar el alias definido en la relación
+              as: "proveedor",
               attributes: ["id", "nombre"],
             },
           ],
         },
         {
           model: Accesorios,
-          attributes: ["nombre", "precio", "vendido"],
+          as: 'Accesorio',
+          attributes: ["nombre", "precio", "vendido"], 
         },
         {
           model: Reparacion,
           attributes: ["descripcion", "reparadoPor", "valor"],
         },
         {
-          model: Proveedor, // también agrego el proveedor directo de la venta, si aplica
+          model: Proveedor,
           attributes: ["id", "nombre"],
         },
       ],
       order: [["fecha", "DESC"]],
     });
+
 
     res.status(200).json(ventas);
   } catch (error) {
@@ -88,7 +90,11 @@ getVentaById: async (req: Request, res: Response, next: NextFunction) => {
             },
           ],
         },
-        { model: Accesorios },
+        {
+          model: Accesorios,
+          as: 'Accesorio',
+          attributes: ["nombre", "precio", "vendido"],
+        },
         { model: Reparacion },
         {
           model: Proveedor,
@@ -105,7 +111,6 @@ getVentaById: async (req: Request, res: Response, next: NextFunction) => {
   }
 },
 
-
   createVenta: async (req: Request, res: Response, next: NextFunction) => {
     const t = await sequelize.transaction();
     try {
@@ -117,6 +122,7 @@ getVentaById: async (req: Request, res: Response, next: NextFunction) => {
         accesorioId,
         reparacionId,
         metodoPago,
+        comprador, 
         imei,
       } = req.body;
 
@@ -161,6 +167,7 @@ getVentaById: async (req: Request, res: Response, next: NextFunction) => {
         accesorioId: accesorioId || null,
         reparacionId: reparacionId || null,
         metodoPago: metodoPago || null,
+        comprador: comprador || null,
       }, { transaction: t });
 
       // Actualizar celular: marcar vendido en lugar de eliminar

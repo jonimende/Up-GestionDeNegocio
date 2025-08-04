@@ -8,43 +8,92 @@ const Home: React.FC = () => {
   const adminStr = localStorage.getItem("admin");
   const esAdmin = adminStr === "true";
 
-  const handleAgregarVenta = () => {
-    navigate("/ventas/nuevo");
-  };
-
-  const handleVerNotas = () => {
-    navigate("/notas");
-  };
-
-  const handleAgregarStock = () => {
-    navigate("/stock/nuevo");
-  };
-
-  const handleAdminVentas = () => {
-    navigate("/admin/ventas");
-  };
-
-  const handleControlStock = () => {
-    navigate("/control-stock");
-  };
-
-  // Nuevo handler para caja
-  const handleCaja = () => {
-    navigate("/ventas/caja");
-  };
-
-  // Nuevo handler para agregar reparación
-  const handleAgregarReparacion = () => {
-    navigate("/admin/reparaciones");
-  };
+  const handleAgregarVenta = () => navigate("/ventas/nuevo");
+  const handleVerNotas = () => navigate("/notas");
+  const handleAgregarStock = () => navigate("/stock/nuevo");
+  const handleAdminVentas = () => navigate("/admin/ventas");
+  const handleControlStock = () => navigate("/control-stock");
+  const handleCaja = () => navigate("/ventas/caja");
+  const handleAgregarReparacion = () => navigate("/admin/reparaciones");
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8, textAlign: "center" }}>
-      <Typography variant="h3" gutterBottom>
-        Bienvenido al Home Privado
-      </Typography>
+    <Container
+      maxWidth="sm"
+      sx={{
+        mt: 8,
+        textAlign: "center",
+        fontFamily: "'Montserrat', sans-serif",
+      }}
+    >
+      {/* Título principal con U y P grandes y desplazadas */}
+      <Box
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.3,
+          mb: 6,
+          justifyContent: "center",
+          userSelect: "none",
+        }}
+      >
+        {/* U muy grande y más arriba */}
+        <Typography
+          component="span"
+          sx={{
+            fontSize: { xs: "12rem", sm: "14rem" },
+            fontWeight: "900",
+            color: "#000",
+            lineHeight: 1,
+            display: "inline-block",
+            transform: "translateY(-20%)",
+          }}
+        >
+          U
+        </Typography>
 
-      <Box sx={{ mt: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+        {/* P muy grande y más abajo */}
+        <Typography
+          component="span"
+          sx={{
+            fontSize: { xs: "12rem", sm: "14rem" },
+            fontWeight: "900",
+            color: "#000",
+            lineHeight: 1,
+            display: "inline-block",
+            transform: "translateY(20%)",
+          }}
+        >
+          P
+        </Typography>
+
+        {/* Accesorios pegado y alineado */}
+        <Typography
+          variant="subtitle2"
+          sx={{
+            fontWeight: "medium",
+            color: "#555",
+            mt: "20px",
+            textTransform: "uppercase",
+            letterSpacing: 1,
+            fontSize: "1rem",
+            ml: 0.5,
+            userSelect: "none",
+          }}
+        >
+          accesorios
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          mt: 4,
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+          maxWidth: 400,
+          mx: "auto",
+        }}
+      >
         <Button
           variant="contained"
           color="primary"

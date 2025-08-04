@@ -17,7 +17,7 @@ router.get("/",authenticateToken, async (req, res) => {
   }
 });
 
-router.get("/disponibles", async (req, res) => {
+router.get("/disponibles",authenticateToken, async (req, res) => {
   try {
     const disponibles = await Accesorios.findAll({
       where: { vendido: false },
@@ -45,15 +45,25 @@ router.get("/:id",authenticateToken, async (req, res) => {
 // POST - crear un nuevo accesorio
 router.post("/", authenticateToken, async (req, res) => {
   try {
-    const { nombre, stock } = req.body;
+    const { nombre, stock, precio } = req.body;
 
     if (!nombre) {
       return res.status(400).json({ message: "El nombre es obligatorio" });
     }
+    if (precio === undefined || precio === null) {
+      return res.status(400).json({ message: "El precio es obligatorio" });
+    }
+
+    const stockNum = stock ?? 0;
+    const precioNum = parseFloat(precio);
+    if (isNaN(precioNum) || precioNum < 0) {
+      return res.status(400).json({ message: "Precio inválido" });
+    }
 
     const nuevoAccesorio = await Accesorios.create({
       nombre,
-      stock: stock ?? 0,
+      stock: stockNum,
+      precio: precioNum,
     });
 
     res.status(201).json(nuevoAccesorio);
@@ -62,6 +72,7 @@ router.post("/", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Error al crear accesorio" });
   }
 });
+
 
 // PUT - actualizar un accesorio por ID
 router.put("/:id",authenticateToken, isAdmin, async (req, res) => {

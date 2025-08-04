@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+} from "@mui/material";
 
 interface Nota {
   id: number;
@@ -10,14 +21,17 @@ interface Nota {
 const Notas = () => {
   const [notas, setNotas] = useState<Nota[]>([]);
   const [nuevaNota, setNuevaNota] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const cargarNotas = async () => {
     try {
+      setLoading(true);
       const res = await axios.get<Nota[]>("http://localhost:3001/notas");
       setNotas(res.data);
-      console.log("Notas cargadas:", res.data);
     } catch (error) {
       console.error("Error al cargar notas:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,35 +60,65 @@ const Notas = () => {
   }, []);
 
   return (
-    <div style={{ maxWidth: 600, margin: "0 auto", padding: 20 }}>
-      <h1 style={{ textAlign: "center" }}>Notas</h1>
+    <Paper sx={{ maxWidth: 600, mx: "auto", p: 4, mt: 4, borderRadius: 3 }}>
+      <Typography
+        variant="h4"
+        component="h1"
+        gutterBottom
+        align="center"
+        sx={{ color: "#1565c0", fontWeight: "bold" }}
+      >
+        Notas
+      </Typography>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <input
-          type="text"
+      <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          label="Nueva Nota"
           value={nuevaNota}
           onChange={(e) => setNuevaNota(e.target.value)}
-          placeholder="Nueva Nota"
-          style={{ flex: 1, padding: 8 }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") agregarNota();
+          }}
+          disabled={loading}
         />
-        <button onClick={agregarNota}>Agregar</button>
-      </div>
+        <Button variant="contained" color="primary" onClick={agregarNota} disabled={loading}>
+          Agregar
+        </Button>
+      </Box>
 
-      <ul>
+      <List>
+        {notas.length === 0 && !loading && (
+          <Typography align="center" color="text.secondary">
+            No hay notas para mostrar.
+          </Typography>
+        )}
+
         {notas.map((nota) => (
-          <li key={nota.id} style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
-            <div>
-              <strong>{nota.contenido}</strong>
-              <br />
-              <small>{new Date(nota.createdAt).toLocaleString()}</small>
-            </div>
-            <button onClick={() => eliminarNota(nota.id)} style={{ marginLeft: 16 }}>
-              Eliminar
-            </button>
-          </li>
+          <div key={nota.id}>
+            <ListItem
+              secondaryAction={
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={() => eliminarNota(nota.id)}
+                >
+                  Eliminar
+                </Button>
+              }
+            >
+              <ListItemText
+                primary={nota.contenido}
+                secondary={new Date(nota.createdAt).toLocaleString()}
+              />
+            </ListItem>
+            <Divider component="li" />
+          </div>
         ))}
-      </ul>
-    </div>
+      </List>
+    </Paper>
   );
 };
 

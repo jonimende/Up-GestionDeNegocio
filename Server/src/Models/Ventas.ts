@@ -100,7 +100,7 @@ Venta.init({
   sequelize,
   modelName: 'Venta',
   tableName: 'ventas',
-  timestamps: false,
+  timestamps: true,
 });
 
 // Relaciones
@@ -110,7 +110,7 @@ Reparacion.hasMany(Venta, { foreignKey: 'reparacionId' });
 Venta.belongsTo(Celular, { foreignKey: 'celularId' });
 Celular.hasMany(Venta, { foreignKey: 'celularId' });
 
-Venta.belongsTo(Accesorios, { foreignKey: 'accesorioId' });
+Venta.belongsTo(Accesorios, { foreignKey: 'accesorioId', as: 'Accesorio' });
 Accesorios.hasMany(Venta, { foreignKey: 'accesorioId' });
 
 Venta.belongsTo(Proveedor, { foreignKey: 'idProveedor' });
