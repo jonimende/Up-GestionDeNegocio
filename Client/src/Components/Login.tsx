@@ -29,7 +29,7 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post<{ token: string; admin: boolean }>(
+      const response = await axios.post<{ token: string }>(
         "http://localhost:3001/auth/login",
         {
           nombre: nombre.trim(),
@@ -37,9 +37,10 @@ const Login: React.FC = () => {
         }
       );
 
+      // ✅ Solo guardás el token en localStorage
       localStorage.setItem("token", response.data.token);
-      localStorage.setItem("admin", response.data.admin.toString());
 
+      // ✅ Redirigís al Home, donde se decodifica el token de forma segura
       navigate("/home");
     } catch (err: unknown) {
       if (isAxiosError(err)) {
