@@ -83,7 +83,7 @@ interface Proveedor {
   nombre: string;
 }
 
-const METODOS_PAGO = ["Efectivo", "Transferencia", "Tarjeta"];
+const METODOS_PAGO = ["Efectivo", "Transferencia"];
 
 const AdminVentas: React.FC = () => {
   const [ventas, setVentas] = useState<Venta[]>([]);
@@ -116,7 +116,6 @@ const AdminVentas: React.FC = () => {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
-        console.log("Ventas recibidas:", ventasRes.data);
         setVentas(ventasRes.data);
         setProveedores(proveedoresRes.data);
       } catch (error) {

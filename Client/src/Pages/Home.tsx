@@ -1,12 +1,72 @@
-import React from "react";
-import { Container, Typography, Button, Box } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import {
+  Container,
+  Typography,
+  Button,
+  Box,
+  CircularProgress,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
+
+interface DecodedToken {
+  id: number;
+  nombre: string;
+  admin: boolean;
+  exp: number;
+}
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
 
-  const adminStr = localStorage.getItem("admin");
-  const esAdmin = adminStr === "true";
+  useEffect(() => {
+    const verificarToken = () => {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      try {
+        const decoded = jwtDecode<DecodedToken>(token);
+        const now = Date.now() / 1000;
+
+        if (decoded.exp < now) {
+          localStorage.removeItem("token");
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        setIsAdmin(decoded.admin);
+        setAuthenticated(true);
+      } catch {
+        localStorage.removeItem("token");
+        navigate("/login", { replace: true });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verificarToken();
+  }, [navigate]);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!authenticated) {
+    // En teoría nunca debería llegar acá porque redirigimos arriba,
+    // pero por seguridad mostramos nada o mensaje.
+    return null;
+  }
 
   const handleAgregarVenta = () => navigate("/ventas/nuevo");
   const handleVerNotas = () => navigate("/notas");
@@ -25,7 +85,6 @@ const Home: React.FC = () => {
         fontFamily: "'Montserrat', sans-serif",
       }}
     >
-      {/* Título principal con U y P grandes y desplazadas */}
       <Box
         sx={{
           display: "inline-flex",
@@ -36,7 +95,6 @@ const Home: React.FC = () => {
           userSelect: "none",
         }}
       >
-        {/* U muy grande y más arriba */}
         <Typography
           component="span"
           sx={{
@@ -44,14 +102,11 @@ const Home: React.FC = () => {
             fontWeight: "900",
             color: "#000",
             lineHeight: 1,
-            display: "inline-block",
             transform: "translateY(-20%)",
           }}
         >
           U
         </Typography>
-
-        {/* P muy grande y más abajo */}
         <Typography
           component="span"
           sx={{
@@ -59,14 +114,11 @@ const Home: React.FC = () => {
             fontWeight: "900",
             color: "#000",
             lineHeight: 1,
-            display: "inline-block",
             transform: "translateY(20%)",
           }}
         >
           P
         </Typography>
-
-        {/* Accesorios pegado y alineado */}
         <Typography
           variant="subtitle2"
           sx={{
@@ -94,6 +146,7 @@ const Home: React.FC = () => {
           mx: "auto",
         }}
       >
+        {/* Este botón siempre se muestra para todos los usuarios autenticados */}
         <Button
           variant="contained"
           color="primary"
@@ -103,7 +156,8 @@ const Home: React.FC = () => {
           Agregar Venta
         </Button>
 
-        {esAdmin && (
+        {/* Estos botones sólo se muestran si es admin */}
+        {isAdmin && (
           <>
             <Button
               variant="outlined"
@@ -113,7 +167,6 @@ const Home: React.FC = () => {
             >
               Ver Notas
             </Button>
-
             <Button
               variant="contained"
               color="success"
@@ -122,7 +175,6 @@ const Home: React.FC = () => {
             >
               Agregar Stock
             </Button>
-
             <Button
               variant="contained"
               color="error"
@@ -131,7 +183,6 @@ const Home: React.FC = () => {
             >
               Administración de Ventas
             </Button>
-
             <Button
               variant="contained"
               color="info"
@@ -140,7 +191,6 @@ const Home: React.FC = () => {
             >
               Control de Stock
             </Button>
-
             <Button
               variant="contained"
               color="warning"
@@ -149,7 +199,6 @@ const Home: React.FC = () => {
             >
               Caja Diaria/Mensual
             </Button>
-
             <Button
               variant="contained"
               color="secondary"
