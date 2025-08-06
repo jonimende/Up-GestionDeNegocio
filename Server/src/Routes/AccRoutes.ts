@@ -84,11 +84,12 @@ router.put("/:id",authenticateToken, isAdmin, async (req, res) => {
       return res.status(404).json({ message: "Accesorio no encontrado" });
     }
 
-    const { nombre, stock } = req.body;
+    const { nombre, stock, precio } = req.body;
 
     await accesorio.update({
       nombre: nombre ?? accesorio.nombre,
       stock: stock ?? accesorio.stock,
+      precio: precio ?? accesorio.precio,
     });
 
     res.json(accesorio);

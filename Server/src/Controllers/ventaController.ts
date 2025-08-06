@@ -333,36 +333,55 @@ export const ventasController = {
   },
 
   createVentaAdmin: async (req: Request, res: Response, next: NextFunction) => {
-    const t = await sequelize.transaction();
-    try {
-      console.log('Creando venta admin con datos:', req.body);
+  const t = await sequelize.transaction();
+  try {
+    console.log('Creando venta admin con datos:', req.body);
 
-      const {
-        cantidad,
-        total,
-        celularId,
-        accesorioId,
-        reparacionId,
-        metodoPago,
-        descuento,
-        comprador,
-        ganancia,
-        idProveedor,
-        imei,
-      } = req.body;
+    const {
+      cantidad,
+      total,
+      celularId,
+      accesorioId,
+      reparacionId,
+      metodoPago,
+      descuento,
+      comprador,
+      ganancia,
+      idProveedor,
+      proveedorNombre,  // NUEVO campo para nombre de proveedor
+      imei,
+    } = req.body;
 
-      if (!cantidad || cantidad <= 0) {
-        console.warn('Cantidad inválida:', cantidad);
-        await t.rollback();
-        return res.status(400).json({ error: 'Cantidad inválida' });
+    if (!cantidad || cantidad <= 0) {
+      await t.rollback();
+      return res.status(400).json({ error: 'Cantidad inválida' });
+    }
+    if (!total || total <= 0) {
+      await t.rollback();
+      return res.status(400).json({ error: 'Total inválido' });
+    }
+
+    // Validación y creación de proveedor nuevo si es necesario
+    let proveedorIdFinal = idProveedor || null;
+
+    if ((!proveedorIdFinal || proveedorIdFinal === null) && proveedorNombre && proveedorNombre.trim() !== "") {
+      // Buscar proveedor existente por nombre
+      const proveedorExistente = await Proveedor.findOne({
+        where: { nombre: proveedorNombre.trim() },
+        transaction: t,
+      });
+      if (proveedorExistente) {
+        proveedorIdFinal = proveedorExistente.id;
+      } else {
+        // Crear proveedor nuevo
+        const nuevoProveedor = await Proveedor.create(
+          { nombre: proveedorNombre.trim() },
+          { transaction: t }
+        );
+        proveedorIdFinal = nuevoProveedor.id;
       }
-      if (!total || total <= 0) {
-        console.warn('Total inválido:', total);
-        await t.rollback();
-        return res.status(400).json({ error: 'Total inválido' });
-      }
-
-      // En createVenta y createVentaAdmin, reemplaza la lógica relacionada con celulares por esta:
+      console.log(`Proveedor usado: ID=${proveedorIdFinal}`);
+    }
 
     if (celularId) {
       const celular = await Celular.findByPk(celularId, { transaction: t, lock: t.LOCK.UPDATE });
@@ -370,118 +389,84 @@ export const ventasController = {
         await t.rollback();
         return res.status(400).json({ error: 'Celular no encontrado' });
       }
-
       if (celular.stock == null) {
         await t.rollback();
         return res.status(400).json({ error: 'El stock del celular es inválido (null)' });
       }
-
       if (cantidad > celular.stock) {
         await t.rollback();
         return res.status(400).json({ error: 'Cantidad solicitada supera el stock disponible' });
       }
-
       celular.stock -= cantidad;
-
-      // Marca como vendido solo si stock queda en 0
       celular.vendido = celular.stock === 0;
-
       if (imei) celular.imei = imei;
-
-      // Actualizamos la fecha de venta solo si stock llega a 0
       if (celular.vendido) {
         celular.fechaVenta = new Date();
       }
-
       if (comprador !== undefined && comprador !== null) {
         celular.comprador = comprador;
       }
-
+      if (proveedorIdFinal !== null) {
+        celular.idProveedor = proveedorIdFinal;
+      }
+      if (ganancia !== undefined && ganancia !== null) {
+        celular.ganancia = ganancia;
+      }
       await celular.save({ transaction: t });
-
-      console.log(`✅ Celular ${celularId} actualizado:`);
-      console.log(`   - Stock restante: ${celular.stock}`);
-      console.log(`   - Vendido: ${celular.vendido ? 'Sí' : 'No'}`);
     }
 
-      if (accesorioId) {
-        const accesorio = await Accesorios.findByPk(accesorioId, {
-          transaction: t,
-          lock: t.LOCK.UPDATE,
-        });
-
-        if (!accesorio) {
-          console.warn(`Accesorio con id ${accesorioId} no encontrado.`);
-          await t.rollback();
-          return res.status(400).json({ error: 'Accesorio no encontrado' });
-        }
-
-        if (accesorio.stock == null) {
-          console.warn('Stock del accesorio es null');
-          await t.rollback();
-          return res.status(400).json({ error: 'El stock del accesorio es inválido (null)' });
-        }
-
-        if (cantidad > accesorio.stock) {
-          console.warn(`Cantidad solicitada ${cantidad} supera stock disponible ${accesorio.stock}`);
-          await t.rollback();
-          return res.status(400).json({ error: 'Cantidad solicitada supera el stock disponible' });
-        }
-
-        accesorio.stock -= cantidad;
-        accesorio.vendido = accesorio.stock === 0;
-
-        await accesorio.save({ transaction: t });
-
-        console.log(`✅ Accesorio ${accesorioId} actualizado:`);
-        console.log(`   - Stock restante: ${accesorio.stock}`);
-        console.log(`   - Vendido: ${accesorio.vendido ? 'Sí' : 'No'}`);
+    if (accesorioId) {
+      const accesorio = await Accesorios.findByPk(accesorioId, {
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+      if (!accesorio) {
+        await t.rollback();
+        return res.status(400).json({ error: 'Accesorio no encontrado' });
       }
-
-      if (reparacionId) {
-        const reparacionExists = await Reparacion.findByPk(reparacionId, { transaction: t });
-        if (!reparacionExists) {
-          console.warn(`Reparación con id ${reparacionId} no encontrada.`);
-          await t.rollback();
-          return res.status(404).json({ error: 'Reparación no encontrada' });
-        }
+      if (accesorio.stock == null) {
+        await t.rollback();
+        return res.status(400).json({ error: 'El stock del accesorio es inválido (null)' });
       }
-
-      const nuevaVenta = await Venta.create({
-        cantidad,
-        total,
-        fecha: new Date(),
-        celularId: celularId || null,
-        accesorioId: accesorioId || null,
-        reparacionId: reparacionId || null,
-        metodoPago: metodoPago || null,
-        descuento: descuento || null,
-        comprador: comprador || null,
-        ganancia: ganancia || null,
-        idProveedor: idProveedor || null,
-      }, { transaction: t });
-
-      if (celularId) {
-        const celular = await Celular.findByPk(celularId, { transaction: t });
-        if (celular) {
-          if (comprador !== undefined && comprador !== null) celular.comprador = comprador;
-          if (idProveedor !== undefined && idProveedor !== null) celular.idProveedor = idProveedor;
-          if (ganancia !== undefined && ganancia !== null) celular.ganancia = ganancia;
-          celular.fechaVenta = new Date();
-          //celular.vendido = true;
-          await celular.save({ transaction: t });
-          console.log(`Celular ${celularId} marcado como vendido.`);
-        }
+      if (cantidad > accesorio.stock) {
+        await t.rollback();
+        return res.status(400).json({ error: 'Cantidad solicitada supera el stock disponible' });
       }
-
-      await t.commit();
-      console.log('Venta admin creada exitosamente:', nuevaVenta.id);
-      res.status(201).json(nuevaVenta);
-
-    } catch (error) {
-      await t.rollback();
-      console.error('Error en createVentaAdmin:', error);
-      next(error);
+      accesorio.stock -= cantidad;
+      accesorio.vendido = accesorio.stock === 0;
+      await accesorio.save({ transaction: t });
     }
-  },
+
+    if (reparacionId) {
+      const reparacionExists = await Reparacion.findByPk(reparacionId, { transaction: t });
+      if (!reparacionExists) {
+        await t.rollback();
+        return res.status(404).json({ error: 'Reparación no encontrada' });
+      }
+    }
+
+    const nuevaVenta = await Venta.create({
+      cantidad,
+      total,
+      fecha: new Date(),
+      celularId: celularId || null,
+      accesorioId: accesorioId || null,
+      reparacionId: reparacionId || null,
+      metodoPago: metodoPago || null,
+      descuento: descuento || null,
+      comprador: comprador || null,
+      ganancia: ganancia || null,
+      idProveedor: proveedorIdFinal,
+    }, { transaction: t });
+
+    await t.commit();
+    console.log('Venta admin creada exitosamente:', nuevaVenta.id);
+    res.status(201).json(nuevaVenta);
+
+  } catch (error) {
+    await t.rollback();
+    console.error('Error en createVentaAdmin:', error);
+    next(error);
+  }
+},
 };

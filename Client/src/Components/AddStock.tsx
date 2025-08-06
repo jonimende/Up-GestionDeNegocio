@@ -9,10 +9,11 @@ import {
   FormControl,
   Typography,
   Alert,
-  SelectChangeEvent,
+  Autocomplete,
+  CircularProgress,
 } from "@mui/material";
+import { SelectChangeEvent } from "@mui/material";
 
-// Tipos
 type Reparacion = {
   id: number;
   descripcion: string;
@@ -40,7 +41,8 @@ type CelularForm = {
   fechaIngreso: string;
   observaciones: string;
   stock: string;
-  idProveedor: string | number;
+  // Cambié para manejar proveedor como union id:number | nombre:string
+  idProveedor: number | string;
   imei: string;
 };
 
@@ -54,6 +56,9 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
   const [tipo, setTipo] = useState<null | "celular" | "accesorio">(null);
   const [reparaciones, setReparaciones] = useState<Reparacion[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [showAddProveedor, setShowAddProveedor] = useState(false);
+  const [newProveedorNombre, setNewProveedorNombre] = useState("");
+  const [agregandoProveedor, setAgregandoProveedor] = useState(false);
 
   const [celularForm, setCelularForm] = useState<CelularForm>({
     modelo: "",
@@ -99,10 +104,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         return res.json();
       })
       .then(setReparaciones)
-      .catch((error) => {
-        console.error(error);
-        setReparaciones([]);
-      });
+      .catch(() => setReparaciones([]));
   }, []);
 
   useEffect(() => {
@@ -116,13 +118,9 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         return res.json();
       })
       .then(setProveedores)
-      .catch((error) => {
-        console.error(error);
-        setProveedores([]);
-      });
+      .catch(() => setProveedores([]));
   }, []);
 
-  // Manejador para inputs tipo texto, number y textarea
   const handleCelularChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -148,13 +146,12 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     });
   };
 
-  // Manejador para selects (MUI) - tiene tipo específico SelectChangeEvent<string>
-  const handleCelularSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target;
+  const handleCelularSelectChange = (event: SelectChangeEvent<string>) => {
+    const { name, value } = event.target;
     setCelularForm((prev) => {
       let updated = { ...prev, [name]: value };
 
-      const precioNum = name === "precio" ? parseFloat(value) : parseFloat(prev.precio);
+      const precioNum = name === "precio" ? Number(value) : Number(prev.precio);
       const reparacion = reparaciones.find(
         (r) =>
           (name === "idReparacion" ? value : prev.idReparacion.toString()) ===
@@ -162,8 +159,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
       );
       const valorReparacion = reparacion ? reparacion.valor : 0;
 
-      const precioValido = !isNaN(precioNum) ? precioNum : 0;
-      updated.valorFinal = (precioValido + valorReparacion).toFixed(2);
+      updated.valorFinal = (precioNum + valorReparacion).toFixed(2);
 
       return updated;
     });
@@ -222,7 +218,9 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token") || "";
-      const body = {
+      
+      // Preparar payload enviando idProveedor o proveedorNombre según corresponda
+      const payload: any = {
         modelo,
         almacenamiento,
         bateria,
@@ -238,9 +236,14 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         fechaIngreso,
         observaciones: celularForm.observaciones || null,
         stock: parseInt(stock),
-        idProveedor: parseInt(idProveedor.toString()),
         imei,
       };
+
+      if (typeof idProveedor === "number") {
+        payload.idProveedor = idProveedor;
+      } else if (typeof idProveedor === "string" && idProveedor.trim() !== "") {
+        payload.proveedorNombre = idProveedor.trim();
+      }
 
       const res = await fetch("http://localhost:3001/celulares", {
         method: "POST",
@@ -248,7 +251,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -279,6 +282,47 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
       setLoading(false);
     }
   };
+
+  const handleAgregarProveedor = async () => {
+    if (!newProveedorNombre.trim()) {
+      setError("El nombre del proveedor no puede estar vacío");
+      return;
+    }
+
+    try {
+      setAgregandoProveedor(true);
+      setError(null);
+      const token = localStorage.getItem("token") || "";
+
+      const res = await fetch("http://localhost:3001/proveedores", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ nombre: newProveedorNombre.trim() }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Error al agregar proveedor");
+      }
+
+      const nuevoProveedor = await res.json();
+
+      // Agregar a la lista y seleccionarlo
+      setProveedores((prev) => [...prev, nuevoProveedor]);
+      setCelularForm((prev) => ({ ...prev, idProveedor: nuevoProveedor.id }));
+      setNewProveedorNombre("");
+      setShowAddProveedor(false);
+      setSuccessMsg("Proveedor agregado con éxito");
+    } catch (error: any) {
+      setError(error.message || "Error al agregar proveedor");
+    } finally {
+      setAgregandoProveedor(false);
+    }
+  };
+
 
   const submitAccesorio = async (e: FormEvent) => {
     e.preventDefault();
@@ -336,7 +380,15 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
   };
 
   return (
-    <Box maxWidth={600} mx="auto" p={3} border={1} borderRadius={2} borderColor="grey.300" boxShadow={1}>
+    <Box
+      maxWidth={600}
+      mx="auto"
+      p={3}
+      border={1}
+      borderRadius={2}
+      borderColor="grey.300"
+      boxShadow={1}
+    >
       {!tipo ? (
         <Box textAlign="center">
           <Typography variant="h5" fontWeight="bold" mb={3}>
@@ -363,7 +415,12 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
           <Typography variant="h6" fontWeight="bold" mb={2}>
             Agregar Celular
           </Typography>
-          <Box component="form" onSubmit={submitCelular} noValidate sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Box
+            component="form"
+            onSubmit={submitCelular}
+            noValidate
+            sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+          >
             {[
               "modelo",
               "almacenamiento",
@@ -402,29 +459,74 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
               onChange={handleCelularChange}
               required
             />
+            <Autocomplete
+              freeSolo
+              options={proveedores}
+              getOptionLabel={(option) =>
+                typeof option === "string" ? option : option.nombre
+              }
+              value={
+                typeof celularForm.idProveedor === "number"
+                  ? proveedores.find((p) => p.id === celularForm.idProveedor) || null
+                  : celularForm.idProveedor
+                    ? { id: -1, nombre: celularForm.idProveedor.toString() }
+                    : null
+              }
+              onChange={(event, value) => {
+                if (typeof value === "string") {
+                  setCelularForm((prev) => ({ ...prev, idProveedor: value }));
+                } else if (value && typeof value === "object" && "id" in value) {
+                  setCelularForm((prev) => ({ ...prev, idProveedor: value.id }));
+                } else {
+                  setCelularForm((prev) => ({ ...prev, idProveedor: "" }));
+                }
+              }}
+              onInputChange={(event, newInputValue) => {
+                // Esto se asegura de que el input escrito manualmente se refleje en el estado
+                if (newInputValue !== "") {
+                  setCelularForm((prev) => ({ ...prev, idProveedor: newInputValue }));
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Proveedor *"
+                  required
+                  helperText="Puedes escribir el nombre o seleccionar uno"
+                />
+              )}
+            />
+            <Button
+              onClick={() => setShowAddProveedor(!showAddProveedor)}
+              variant="outlined"
+              color="info"
+              size="small"
+            >
+              {showAddProveedor ? "Cancelar" : "Agregar nuevo proveedor"}
+            </Button>
 
-            <FormControl fullWidth>
-              <InputLabel id="proveedor-label">Proveedor *</InputLabel>
-              <Select
-                labelId="proveedor-label"
-                id="idProveedor"
-                name="idProveedor"
-                value={celularForm.idProveedor.toString()}
-                label="Proveedor *"
-                onChange={handleCelularSelectChange}
-                required
-              >
-                <MenuItem value="">
-                  <em>-- Seleccione un proveedor --</em>
-                </MenuItem>
-                {proveedores.map((p) => (
-                  <MenuItem key={p.id} value={p.id.toString()}>
-                    {p.nombre}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
+            {showAddProveedor && (
+              <Box display="flex" gap={1} mt={1} alignItems="center">
+                <TextField
+                  label="Nombre nuevo proveedor"
+                  value={newProveedorNombre}
+                  onChange={(e) => setNewProveedorNombre(e.target.value)}
+                  size="small"
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleAgregarProveedor}
+                  disabled={agregandoProveedor}
+                >
+                  {agregandoProveedor ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    "Guardar"
+                  )}
+                </Button>
+              </Box>
+            )}
             <TextField
               label="Observaciones"
               name="observaciones"
@@ -483,7 +585,12 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
           <Typography variant="h6" fontWeight="bold" mb={2}>
             Agregar Accesorio
           </Typography>
-          <Box component="form" onSubmit={submitAccesorio} noValidate sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Box
+            component="form"
+            onSubmit={submitAccesorio}
+            noValidate
+            sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+          >
             <TextField
               label="Nombre *"
               name="nombre"
