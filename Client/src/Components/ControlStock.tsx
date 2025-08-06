@@ -16,6 +16,10 @@ import {
   Button,
   CircularProgress,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 
 interface DecodedToken {
@@ -38,16 +42,19 @@ interface Celular {
   idProveedor?: number;
   imei: string;
   vendido: boolean;
+  fechaIngreso?: string;
 }
 
 interface Accesorio {
   id: number;
   nombre: string;
   stock: number;
+  precio: number; // agregado precio
   vendido: boolean;
 }
 
 const ControlDeStock: React.FC = () => {
+  // Estados generales
   const [celulares, setCelulares] = useState<Celular[]>([]);
   const [accesorios, setAccesorios] = useState<Accesorio[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -56,6 +63,11 @@ const ControlDeStock: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [filtro, setFiltro] = useState("");
 
+  // Estados para edición
+  const [celularSeleccionado, setCelularSeleccionado] = useState<Celular | null>(null);
+  const [accesorioSeleccionado, setAccesorioSeleccionado] = useState<Accesorio | null>(null);
+
+  // Carga inicial y verificación admin
   useEffect(() => {
     const verificarAdminYFetch = async () => {
       const token = localStorage.getItem("token");
@@ -63,7 +75,6 @@ const ControlDeStock: React.FC = () => {
         setIsAdmin(false);
         return;
       }
-
       try {
         const decoded = jwtDecode<DecodedToken>(token);
         if (!decoded.admin) {
@@ -72,7 +83,6 @@ const ControlDeStock: React.FC = () => {
         }
         setIsAdmin(true);
         setLoading(true);
-
         const [celularesRes, accesoriosRes, proveedoresRes] = await Promise.all([
           axios.get<Celular[]>("http://localhost:3001/celulares", {
             headers: { Authorization: `Bearer ${token}` },
@@ -84,22 +94,21 @@ const ControlDeStock: React.FC = () => {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
-
         setCelulares(celularesRes.data);
         setAccesorios(accesoriosRes.data);
         setProveedores(proveedoresRes.data);
         setError(null);
-      } catch (err) {
+      } catch {
         setError("Error al cargar los datos");
         setIsAdmin(false);
       } finally {
         setLoading(false);
       }
     };
-
     verificarAdminYFetch();
   }, []);
 
+  // Filtrados y disponibles
   const celularesDisponibles = celulares.filter((c) => !c.vendido);
   const accesoriosDisponibles = accesorios.filter((a) => !a.vendido);
 
@@ -127,6 +136,7 @@ const ControlDeStock: React.FC = () => {
   const celularesFiltrados = filtrarCelulares(celularesDisponibles, filtro);
   const accesoriosFiltrados = filtrarAccesorios(accesoriosDisponibles, filtro);
 
+  // Eliminar funciones
   const eliminarCelular = async (id: number) => {
     if (!window.confirm("¿Está seguro que desea eliminar este celular?")) return;
     const token = localStorage.getItem("token") || "";
@@ -153,10 +163,58 @@ const ControlDeStock: React.FC = () => {
     }
   };
 
+  // Nombre proveedor para display
   const getNombreProveedor = (idProveedor?: number) => {
     if (!idProveedor) return "-";
     const prov = proveedores.find((p) => p.id === idProveedor);
     return prov ? prov.nombre : "Desconocido";
+  };
+
+  // Guardar edición celular
+  const handleEditarCelular = async () => {
+    if (!celularSeleccionado) return;
+    const token = localStorage.getItem("token") || "";
+
+    try {
+      const { id, modelo, almacenamiento, bateria, color, precio, stock, idProveedor, imei, fechaIngreso } =
+        celularSeleccionado;
+
+      const res = await axios.put<Celular>(
+        `http://localhost:3001/celulares/${id}`,
+        { modelo, almacenamiento, bateria, color, precio, stock, idProveedor, imei, fechaIngreso },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setCelulares((prev) =>
+        prev.map((c) => (c.id === id ? res.data : c))
+      );
+      setCelularSeleccionado(null);
+      setError(null);
+    } catch {
+      setError("Error actualizando celular");
+    }
+  };
+
+  // Guardar edición accesorio
+  const handleEditarAccesorio = async () => {
+    if (!accesorioSeleccionado) return;
+    const token = localStorage.getItem("token") || "";
+
+    try {
+      const { id, nombre, stock, precio } = accesorioSeleccionado;
+      const res = await axios.put<Accesorio>(
+        `http://localhost:3001/accesorios/${id}`,
+        { nombre, stock, precio },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAccesorios((prev) =>
+        prev.map((a) => (a.id === id ? res.data : a))
+      );
+      setAccesorioSeleccionado(null);
+      setError(null);
+    } catch {
+      setError("Error actualizando accesorio");
+    }
   };
 
   if (!isAdmin) {
@@ -199,6 +257,7 @@ const ControlDeStock: React.FC = () => {
         </Alert>
       )}
 
+      {/* Celulares */}
       <Box mb={6}>
         <Typography variant="h5" fontWeight="semibold" mb={2}>
           Celulares Disponibles
@@ -220,6 +279,7 @@ const ControlDeStock: React.FC = () => {
                     "Stock",
                     "Proveedor",
                     "IMEI",
+                    "Fecha Ingreso",
                     "Acciones",
                   ].map((header) => (
                     <TableCell key={header} sx={{ fontWeight: "bold" }}>
@@ -239,7 +299,16 @@ const ControlDeStock: React.FC = () => {
                     <TableCell>{celular.stock}</TableCell>
                     <TableCell>{getNombreProveedor(celular.idProveedor)}</TableCell>
                     <TableCell>{celular.imei}</TableCell>
+                    <TableCell>{celular.fechaIngreso || "-"}</TableCell>
                     <TableCell>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        sx={{ mr: 1 }}
+                        onClick={() => setCelularSeleccionado(celular)}
+                      >
+                        Editar
+                      </Button>
                       <Button
                         variant="contained"
                         color="error"
@@ -257,6 +326,7 @@ const ControlDeStock: React.FC = () => {
         )}
       </Box>
 
+      {/* Accesorios */}
       <Box>
         <Typography variant="h5" fontWeight="semibold" mb={2}>
           Accesorios Disponibles
@@ -269,7 +339,7 @@ const ControlDeStock: React.FC = () => {
             <Table size="small" aria-label="tabla accesorios disponibles">
               <TableHead>
                 <TableRow>
-                  {["Nombre", "Stock", "Acciones"].map((header) => (
+                  {["Nombre", "Stock", "Precio", "Acciones"].map((header) => (
                     <TableCell key={header} sx={{ fontWeight: "bold" }}>
                       {header}
                     </TableCell>
@@ -281,7 +351,16 @@ const ControlDeStock: React.FC = () => {
                   <TableRow key={accesorio.id} hover>
                     <TableCell>{accesorio.nombre}</TableCell>
                     <TableCell>{accesorio.stock}</TableCell>
+                    <TableCell>${accesorio.precio.toFixed(2)}</TableCell>
                     <TableCell>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        sx={{ mr: 1 }}
+                        onClick={() => setAccesorioSeleccionado(accesorio)}
+                      >
+                        Editar
+                      </Button>
                       <Button
                         variant="contained"
                         color="error"
@@ -298,6 +377,165 @@ const ControlDeStock: React.FC = () => {
           </TableContainer>
         )}
       </Box>
+
+      {/* Modal edición celular */}
+      <Dialog
+        open={!!celularSeleccionado}
+        onClose={() => setCelularSeleccionado(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Editar Celular</DialogTitle>
+        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <TextField
+            label="Modelo"
+            value={celularSeleccionado?.modelo || ""}
+            onChange={(e) =>
+              setCelularSeleccionado((prev) =>
+                prev ? { ...prev, modelo: e.target.value } : null
+              )
+            }
+          />
+          <TextField
+            label="Almacenamiento"
+            value={celularSeleccionado?.almacenamiento || ""}
+            onChange={(e) =>
+              setCelularSeleccionado((prev) =>
+                prev ? { ...prev, almacenamiento: e.target.value } : null
+              )
+            }
+          />
+          <TextField
+            label="Batería"
+            value={celularSeleccionado?.bateria || ""}
+            onChange={(e) =>
+              setCelularSeleccionado((prev) =>
+                prev ? { ...prev, bateria: e.target.value } : null
+              )
+            }
+          />
+          <TextField
+            label="Color"
+            value={celularSeleccionado?.color || ""}
+            onChange={(e) =>
+              setCelularSeleccionado((prev) =>
+                prev ? { ...prev, color: e.target.value } : null
+              )
+            }
+          />
+          <TextField
+            type="number"
+            label="Precio"
+            value={celularSeleccionado?.precio || 0}
+            onChange={(e) =>
+              setCelularSeleccionado((prev) =>
+                prev ? { ...prev, precio: parseFloat(e.target.value) } : null
+              )
+            }
+          />
+          <TextField
+            type="number"
+            label="Stock"
+            value={celularSeleccionado?.stock || 0}
+            onChange={(e) =>
+              setCelularSeleccionado((prev) =>
+                prev ? { ...prev, stock: parseInt(e.target.value) } : null
+              )
+            }
+          />
+          <TextField
+            select
+            label="Proveedor"
+            value={celularSeleccionado?.idProveedor || ""}
+            onChange={(e) =>
+              setCelularSeleccionado((prev) =>
+                prev ? { ...prev, idProveedor: parseInt(e.target.value) } : null
+              )
+            }
+            SelectProps={{ native: true }}
+          >
+            <option value="">Sin proveedor</option>
+            {proveedores.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </TextField>
+          <TextField
+            label="IMEI"
+            value={celularSeleccionado?.imei || ""}
+            onChange={(e) =>
+              setCelularSeleccionado((prev) =>
+                prev ? { ...prev, imei: e.target.value } : null
+              )
+            }
+          />
+          <TextField
+            label="Fecha Ingreso"
+            type="date"
+            value={celularSeleccionado?.fechaIngreso || ""}
+            onChange={(e) =>
+              setCelularSeleccionado((prev) =>
+                prev ? { ...prev, fechaIngreso: e.target.value } : null
+              )
+            }
+            InputLabelProps={{ shrink: true }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCelularSeleccionado(null)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleEditarCelular}>
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal edición accesorio */}
+      <Dialog
+        open={!!accesorioSeleccionado}
+        onClose={() => setAccesorioSeleccionado(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Editar Accesorio</DialogTitle>
+        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <TextField
+            label="Nombre"
+            value={accesorioSeleccionado?.nombre || ""}
+            onChange={(e) =>
+              setAccesorioSeleccionado((prev) =>
+                prev ? { ...prev, nombre: e.target.value } : null
+              )
+            }
+          />
+          <TextField
+            type="number"
+            label="Stock"
+            value={accesorioSeleccionado?.stock || 0}
+            onChange={(e) =>
+              setAccesorioSeleccionado((prev) =>
+                prev ? { ...prev, stock: parseInt(e.target.value) } : null
+              )
+            }
+          />
+          <TextField
+            type="number"
+            label="Precio"
+            value={accesorioSeleccionado?.precio || 0}
+            onChange={(e) =>
+              setAccesorioSeleccionado((prev) =>
+                prev ? { ...prev, precio: parseFloat(e.target.value) } : null
+              )
+            }
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAccesorioSeleccionado(null)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleEditarAccesorio}>
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

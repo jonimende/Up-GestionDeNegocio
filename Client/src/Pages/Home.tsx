@@ -157,6 +157,14 @@ const Home: React.FC = () => {
         </Button>
 
         {/* Estos botones sólo se muestran si es admin */}
+        <Button
+            variant="contained"
+            color="warning"
+            size="large"
+            onClick={handleCaja}
+            >
+            Caja Diaria/Mensual
+        </Button>
         {isAdmin && (
           <>
             <Button
@@ -190,14 +198,6 @@ const Home: React.FC = () => {
               onClick={handleControlStock}
             >
               Control de Stock
-            </Button>
-            <Button
-              variant="contained"
-              color="warning"
-              size="large"
-              onClick={handleCaja}
-            >
-              Caja Diaria/Mensual
             </Button>
             <Button
               variant="contained"

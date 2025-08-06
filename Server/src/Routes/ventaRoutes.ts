@@ -1,7 +1,7 @@
 // src/Routes/ventasRoutes.ts
 import { Router } from 'express';
 import { ventasController } from '../Controllers/ventaController';
-import { obtenerCaja } from '../Controllers/cajaController';
+import { cajaController } from '../Controllers/cajaController';
 import { authenticateToken } from "../Middlewares/authMiddlewares";
 import { isAdmin } from "../Middlewares/isAdmin";
 
@@ -13,8 +13,8 @@ router.get('/', authenticateToken, isAdmin, async (req, res, next) => {
 });
 
 // Rutas fijas primero para que no choquen con parámetros dinámicos
-router.get('/caja/consulta', authenticateToken, isAdmin, async (req, res) => {
-  await obtenerCaja(req, res);
+router.get('/caja/consulta', authenticateToken, async (req, res) => {
+  await cajaController.obtenerCaja(req, res);
 });
 
 // Obtener una venta por ID (solo admin) - esta ruta va al final

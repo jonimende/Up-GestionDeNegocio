@@ -33,7 +33,7 @@ interface Celular {
 interface Item {
   id: number;
   nombre: string;
-  precio?: number; // para accesorios, opcional
+  precio?: number;
 }
 
 interface Reparacion {
@@ -91,6 +91,9 @@ const AddVenta: React.FC = () => {
 
   const [showDescuento, setShowDescuento] = useState(false);
   const [porcentajeDescuento, setPorcentajeDescuento] = useState<number>(0);
+
+  // Nuevo estado para el nombre del proveedor editable
+  const [proveedorNombre, setProveedorNombre] = useState<string>('');
 
   const refetchLists = async () => {
     try {
@@ -159,6 +162,14 @@ const AddVenta: React.FC = () => {
         setImei('');
       }
       setTotal(value.precio * cantidad);
+
+      // Actualizamos el proveedorNombre cuando seleccionamos un celular
+      if (value.proveedorId) {
+        const prov = proveedores.find(p => p.id === value.proveedorId);
+        setProveedorNombre(prov ? prov.nombre : '');
+      } else {
+        setProveedorNombre('');
+      }
     } else {
       setSelectedCelularId('');
       setCelularData({
@@ -176,6 +187,18 @@ const AddVenta: React.FC = () => {
       setFechaVenta('');
       setImei('');
       setTotal('');
+      setProveedorNombre('');
+    }
+  };
+
+  // Manejo selección / ingreso proveedor
+  const handleProveedorSelect = (value: Proveedor | null) => {
+    if (value) {
+      setCelularData({ ...celularData, proveedorId: value.id });
+      setProveedorNombre(value.nombre);
+    } else {
+      setCelularData({ ...celularData, proveedorId: null });
+      setProveedorNombre('');
     }
   };
 
@@ -225,6 +248,9 @@ const AddVenta: React.FC = () => {
         accesorioId: selectedAccesorio !== '' ? selectedAccesorio : null,
         reparacionId: selectedReparacion !== '' ? selectedReparacion : null,
         metodoPago,
+        // Envío proveedorId y proveedorNombre
+        proveedorId: celularData.proveedorId,
+        proveedorNombre: proveedorNombre.trim() || null,
       };
       if (isAdmin) {
         payload.comprador = comprador;
@@ -264,6 +290,7 @@ const AddVenta: React.FC = () => {
       setMetodoPago('');
       setPorcentajeDescuento(0);
       setShowDescuento(false);
+      setProveedorNombre('');
     } catch (error: unknown) {
       if (isAxiosError(error)) {
         if (error.response?.status === 404) {
@@ -310,6 +337,7 @@ const AddVenta: React.FC = () => {
             isOptionEqualToValue={(option, value) => option.id === value.id}
             disabled={loading}
           />
+
           <Box
             sx={{
               display: 'flex',
@@ -366,24 +394,44 @@ const AddVenta: React.FC = () => {
             />
           </Box>
 
-          {/* Proveedor (solo lectura, solo para admin) */}
-          {isAdmin && (
-            <TextField
-              label="Proveedor"
-              fullWidth
-              sx={{ mb: 2 }}
-              value={
-                proveedores.length === 0
-                  ? 'Cargando proveedores...'
-                  : celularData.proveedorId
-                    ? proveedores.find(p => p.id === celularData.proveedorId)?.nombre || 'Proveedor no encontrado'
-                    : 'Proveedor no seleccionado'
+          {/* Proveedor editable */}
+          <Autocomplete
+            options={proveedores}
+            getOptionLabel={(option) => {
+              // option puede ser string o Proveedor
+              if (typeof option === 'string') {
+                return option; // texto libre
               }
-              InputProps={{ readOnly: true }}
-              disabled={loading}
-            />
-          )}
-
+              return option.nombre; // objeto proveedor
+            }}
+            value={
+              // value puede ser string | Proveedor | null
+              typeof proveedorNombre === 'string'
+                ? null
+                : proveedorNombre
+            }
+            onChange={(_, value) => {
+              if (typeof value === 'string') {
+                // texto libre ingresado manualmente
+                setProveedorNombre(value);
+                setCelularData({ ...celularData, proveedorId: null });
+              } else if (value && typeof value === 'object') {
+                // valor seleccionado del listado
+                setProveedorNombre(value.nombre);
+                setCelularData({ ...celularData, proveedorId: value.id });
+              } else {
+                setProveedorNombre('');
+                setCelularData({ ...celularData, proveedorId: null });
+              }
+            }}
+            inputValue={proveedorNombre}
+            onInputChange={(_, newInputValue) => setProveedorNombre(newInputValue)}
+            renderInput={(params) => (
+              <TextField {...params} label="Proveedor" sx={{ mb: 2 }} />
+            )}
+            disabled={loading}
+            freeSolo
+          />
           {/* Accesorio */}
           <Autocomplete
             options={accesorios}

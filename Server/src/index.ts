@@ -12,6 +12,7 @@ import reparaciones from './Routes/reparacionesRoutes';
 import accesorios from './Routes/AccRoutes';
 import notaRoutes from './Routes/NotasRoutes';
 import  proveedoresRoutes  from './Routes/ProovedoresRoutes';
+import MovimientoCaja from './Routes/movimientosCajaRoutes';
 
 const app = express();
 app.use(cors({
@@ -28,7 +29,7 @@ app.use('/accesorios', accesorios);
 app.use('/reparaciones', reparaciones);
 app.use("/proveedores", proveedoresRoutes);
 app.use('/notas', notaRoutes);
-// Manejo de errores global
+app.use('/caja', MovimientoCaja); 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
   res
