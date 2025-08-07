@@ -1,5 +1,5 @@
 import { DataTypes, Model } from 'sequelize';
-import sequelize from '../db';
+import { sequelize } from '../db';
 
 class Nota extends Model {
   public id!: number;

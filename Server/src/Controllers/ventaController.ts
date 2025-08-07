@@ -4,7 +4,7 @@ import { Celular } from '../Models/Celulares';
 import { Accesorios } from '../Models/Accesorios';
 import { Reparacion } from '../Models/Reparaciones';
 import { Proveedor } from '../Models/Proveedores';
-import sequelize from '../db';
+import { sequelize } from '../db';
 
 export const ventasController = {
   getVentas: async (req: Request, res: Response, next: NextFunction) => {
