@@ -1,5 +1,5 @@
 import { Model, DataTypes, Optional } from 'sequelize';
-import sequelize from '../db'; // asumo que este es tu archivo de conexión
+import { sequelize } from '../db'; // asumo que este es tu archivo de conexión
 
 interface MovimientoCajaAttributes {
   id: number;

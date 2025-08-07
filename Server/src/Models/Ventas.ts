@@ -1,5 +1,5 @@
 import { Model, DataTypes, Optional } from 'sequelize';
-import sequelize from '../db';
+import { sequelize } from '../db';
 import { Celular } from './Celulares';
 import { Accesorios } from './Accesorios';
 import { Reparacion } from './Reparaciones';

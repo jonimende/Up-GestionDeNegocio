@@ -1,5 +1,5 @@
 import { DataTypes, Model } from "sequelize";
-import sequelize from "../db";
+import { sequelize } from "../db";
 import { Reparacion } from "./Reparaciones";
 import { Proveedor } from "./Proveedores";
 
