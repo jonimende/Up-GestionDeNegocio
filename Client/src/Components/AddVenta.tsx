@@ -234,7 +234,7 @@ const AddVenta: React.FC = () => {
       return setError('Seleccione al menos un producto');
     if (selectedCelularId !== '' && !celularData.modelo)
       return setError('Complete los datos del celular');
-    if (isAdmin && !comprador.trim()) return setError('Falta el comprador');
+    if (!comprador.trim()) return setError('Falta el comprador');
     if (isAdmin && selectedCelularId !== '' && !imei.trim()) return setError('Falta el IMEI');
     if (!metodoPago.trim()) return setError('Falta el método de pago');
 
@@ -248,12 +248,11 @@ const AddVenta: React.FC = () => {
         accesorioId: selectedAccesorio !== '' ? selectedAccesorio : null,
         reparacionId: selectedReparacion !== '' ? selectedReparacion : null,
         metodoPago,
-        // Envío proveedorId y proveedorNombre
+        comprador: comprador.trim(),
         proveedorId: celularData.proveedorId,
         proveedorNombre: proveedorNombre.trim() || null,
       };
       if (isAdmin) {
-        payload.comprador = comprador;
         payload.ganancia = ganancia !== '' ? ganancia : null;
         payload.fechaIngreso = fechaIngreso || null;
         payload.fechaVenta = fechaVenta || null;
@@ -534,24 +533,29 @@ const AddVenta: React.FC = () => {
               disabled={loading}
             />
           )}
-
-          {/* Método de pago */}
-          <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel id="metodo-pago-label">Método de pago</InputLabel>
-            <Select
-              labelId="metodo-pago-label"
-              value={metodoPago}
-              onChange={(e) => setMetodoPago(e.target.value)}
-              label="Método de pago"
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+            <FormControl sx={{ flex: '0 0 48%' }}>
+              <InputLabel id="metodo-pago-label">Método de pago</InputLabel>
+              <Select
+                labelId="metodo-pago-label"
+                value={metodoPago}
+                onChange={(e) => setMetodoPago(e.target.value)}
+                label="Método de pago"
+                disabled={loading}
+              >
+                {metodoPagoOptions.map((option) => (
+                  <MenuItem key={option} value={option}>{option}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label="Comprador"
+              sx={{ flex: '0 0 48%' }}
+              value={comprador}
+              onChange={(e) => setComprador(e.target.value)}
               disabled={loading}
-            >
-              {metodoPagoOptions.map((option) => (
-                <MenuItem key={option} value={option}>{option}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Campos admin en dos columnas */}
+            />
+          </Box>
           {isAdmin && (
             <Box
               sx={{
@@ -561,13 +565,6 @@ const AddVenta: React.FC = () => {
                 mb: 3,
               }}
             >
-              <TextField
-                label="Comprador"
-                sx={{ flex: '0 0 48%' }}
-                value={comprador}
-                onChange={(e) => setComprador(e.target.value)}
-                disabled={loading}
-              />
               <TextField
                 label="Ganancia"
                 type="number"
