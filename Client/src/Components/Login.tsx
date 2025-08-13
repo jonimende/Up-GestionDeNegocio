@@ -34,7 +34,8 @@ const Login: React.FC = () => {
         {
           nombre: nombre.trim(),
           password,
-        }
+        },
+        { withCredentials: true }
       );
 
       // ✅ Solo guardás el token en localStorage
