@@ -42,7 +42,7 @@ const Login: React.FC = () => {
       localStorage.setItem("token", response.data.token);
 
       // ✅ Redirigís al Home, donde se decodifica el token de forma segura
-      navigate("https://up-gestion-de-negocio.vercel.app/home");
+      navigate("/home");
     } catch (err: unknown) {
       if (isAxiosError(err)) {
         setError(err.response?.data?.error ?? "Error desconocido");
