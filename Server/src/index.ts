@@ -51,6 +51,13 @@ async function startServer() {
     // Crear/sincronizar tablas
     await sequelize.sync({ alter: true }); 
     console.log('✅ Tablas sincronizadas');
+    await Usuario.findOrCreate({
+      where: { nombre: 'admin' },
+      defaults: {
+        password: await bcrypt.hash('123456', 10),
+        admin: true
+      }
+    });
 
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en puerto ${PORT}`);
