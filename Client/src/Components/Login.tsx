@@ -30,7 +30,7 @@ const Login: React.FC = () => {
 
     try {
       const response = await axios.post<{ token: string }>(
-        "http://localhost:3001/auth/login",
+        "https://up-gestiondenegocio-production.up.railway.app/auth/login",
         {
           nombre: nombre.trim(),
           password,

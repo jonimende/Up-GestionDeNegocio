@@ -96,7 +96,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
   useEffect(() => {
     const token = localStorage.getItem("token") || "";
 
-    fetch("http://localhost:3001/reparaciones", {
+    fetch("https://up-gestiondenegocio-production.up.railway.app/reparaciones", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
@@ -110,7 +110,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
   useEffect(() => {
     const token = localStorage.getItem("token") || "";
 
-    fetch("http://localhost:3001/proveedores", {
+    fetch("https://up-gestiondenegocio-production.up.railway.app/proveedores", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
@@ -245,7 +245,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         payload.proveedorNombre = idProveedor.trim();
       }
 
-      const res = await fetch("http://localhost:3001/celulares", {
+      const res = await fetch("https://up-gestiondenegocio-production.up.railway.app/celulares", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -294,7 +294,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
       setError(null);
       const token = localStorage.getItem("token") || "";
 
-      const res = await fetch("http://localhost:3001/proveedores", {
+      const res = await fetch("https://up-gestiondenegocio-production.up.railway.app/proveedores", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -350,7 +350,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         precio: parseFloat(precio),
       };
 
-      const res = await fetch("http://localhost:3001/accesorios", {
+      const res = await fetch("https://up-gestiondenegocio-production.up.railway.app/accesorios", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

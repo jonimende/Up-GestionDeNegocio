@@ -84,13 +84,13 @@ const ControlDeStock: React.FC = () => {
         setIsAdmin(true);
         setLoading(true);
         const [celularesRes, accesoriosRes, proveedoresRes] = await Promise.all([
-          axios.get<Celular[]>("http://localhost:3001/celulares", {
+          axios.get<Celular[]>("https://up-gestiondenegocio-production.up.railway.app/celulares", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get<Accesorio[]>("http://localhost:3001/accesorios", {
+          axios.get<Accesorio[]>("https://up-gestiondenegocio-production.up.railway.app/accesorios", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get<Proveedor[]>("http://localhost:3001/proveedores", {
+          axios.get<Proveedor[]>("https://up-gestiondenegocio-production.up.railway.app/proveedores", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -141,7 +141,7 @@ const ControlDeStock: React.FC = () => {
     if (!window.confirm("¿Está seguro que desea eliminar este celular?")) return;
     const token = localStorage.getItem("token") || "";
     try {
-      await axios.delete(`http://localhost:3001/celulares/${id}`, {
+      await axios.delete(`https://up-gestiondenegocio-production.up.railway.app/celulares/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCelulares((prev) => prev.filter((c) => c.id !== id));
@@ -154,7 +154,7 @@ const ControlDeStock: React.FC = () => {
     if (!window.confirm("¿Está seguro que desea eliminar este accesorio?")) return;
     const token = localStorage.getItem("token") || "";
     try {
-      await axios.delete(`http://localhost:3001/accesorios/${id}`, {
+      await axios.delete(`https://up-gestiondenegocio-production.up.railway.app/accesorios/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAccesorios((prev) => prev.filter((a) => a.id !== id));
@@ -180,7 +180,7 @@ const ControlDeStock: React.FC = () => {
         celularSeleccionado;
 
       const res = await axios.put<Celular>(
-        `http://localhost:3001/celulares/${id}`,
+        `https://up-gestiondenegocio-production.up.railway.app/celulares/${id}`,
         { modelo, almacenamiento, bateria, color, precio, stock, idProveedor, imei, fechaIngreso },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -203,7 +203,7 @@ const ControlDeStock: React.FC = () => {
     try {
       const { id, nombre, stock, precio } = accesorioSeleccionado;
       const res = await axios.put<Accesorio>(
-        `http://localhost:3001/accesorios/${id}`,
+        `https://up-gestiondenegocio-production.up.railway.app/accesorios/${id}`,
         { nombre, stock, precio },
         { headers: { Authorization: `Bearer ${token}` } }
       );

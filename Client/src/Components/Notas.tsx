@@ -26,7 +26,7 @@ const Notas = () => {
   const cargarNotas = async () => {
     try {
       setLoading(true);
-      const res = await axios.get<Nota[]>("http://localhost:3001/notas");
+      const res = await axios.get<Nota[]>("https://up-gestiondenegocio-production.up.railway.app/notas");
       setNotas(res.data);
     } catch (error) {
       console.error("Error al cargar notas:", error);
@@ -38,7 +38,7 @@ const Notas = () => {
   const agregarNota = async () => {
     if (nuevaNota.trim() === "") return;
     try {
-      await axios.post("http://localhost:3001/notas", { contenido: nuevaNota });
+      await axios.post("https://up-gestiondenegocio-production.up.railway.app/notas", { contenido: nuevaNota });
       setNuevaNota("");
       cargarNotas();
     } catch (error) {
@@ -48,7 +48,7 @@ const Notas = () => {
 
   const eliminarNota = async (id: number) => {
     try {
-      await axios.delete(`http://localhost:3001/notas/${id}`);
+      await axios.delete(`https://up-gestiondenegocio-production.up.railway.app/notas/${id}`);
       cargarNotas();
     } catch (error) {
       console.error("Error al eliminar nota:", error);

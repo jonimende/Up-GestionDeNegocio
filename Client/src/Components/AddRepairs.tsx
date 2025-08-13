@@ -68,7 +68,7 @@ const AddReparacion: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        'http://localhost:3001/reparaciones',
+        'https://up-gestiondenegocio-production.up.railway.app/reparaciones',
         {
           descripcion,
           valor: parseFloat(valor),

@@ -99,7 +99,7 @@ const Caja = () => {
 
     try {
       const res = await axios.get<ResCaja>(
-        "http://localhost:3001/ventas/caja/consulta",
+        "https://up-gestiondenegocio-production.up.railway.app/ventas/caja/consulta",
         {
           params: { tipo, metodoPago },
           headers: { Authorization: `Bearer ${token}` },
@@ -123,7 +123,7 @@ const Caja = () => {
 
     try {
       const res = await axios.get<Movimiento[]>(
-        "http://localhost:3001/caja/movimientos",
+        "https://up-gestiondenegocio-production.up.railway.app/caja/movimientos",
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setMovimientos(res.data.map((mov) => ({ ...mov, monto: Number(mov.monto) })));
@@ -138,7 +138,7 @@ const Caja = () => {
 
     try {
       const res = await axios.get<{ balance: number }>(
-        "http://localhost:3001/caja/movimientos/balance",
+        "https://up-gestiondenegocio-production.up.railway.app/caja/movimientos/balance",
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setBalance(res.data.balance);
@@ -164,7 +164,7 @@ const Caja = () => {
 
     try {
       await axios.post(
-        "http://localhost:3001/caja/movimientos",
+        "https://up-gestiondenegocio-production.up.railway.app/caja/movimientos",
         {
           tipoMovimiento,
           monto: montoMovimiento,
@@ -234,7 +234,7 @@ const Caja = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:3001/caja/movimientos/${movimientoAEliminar}`, {
+      await axios.delete(`https://up-gestiondenegocio-production.up.railway.app/caja/movimientos/${movimientoAEliminar}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSnackbar({ open: true, message: "Movimiento eliminado correctamente", severity: "success" });

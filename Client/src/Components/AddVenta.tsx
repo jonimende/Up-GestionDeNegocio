@@ -100,10 +100,10 @@ const AddVenta: React.FC = () => {
       const token = localStorage.getItem('token') || '';
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const [celRes, accRes, repRes, provRes] = await Promise.all([
-        axios.get<Celular[]>('http://localhost:3001/celulares/disponibles', config),
-        axios.get<Item[]>('http://localhost:3001/accesorios/disponibles', config),
-        axios.get<Reparacion[]>('http://localhost:3001/reparaciones', config),
-        axios.get<Proveedor[]>('http://localhost:3001/proveedores', config),
+        axios.get<Celular[]>('https://up-gestiondenegocio-production.up.railway.app/celulares/disponibles', config),
+        axios.get<Item[]>('https://up-gestiondenegocio-production.up.railway.app/accesorios/disponibles', config),
+        axios.get<Reparacion[]>('https://up-gestiondenegocio-production.up.railway.app/reparaciones', config),
+        axios.get<Proveedor[]>('https://up-gestiondenegocio-production.up.railway.app/proveedores', config),
       ]);
       setCelulares(celRes.data);
       setAccesorios(accRes.data);
@@ -124,10 +124,10 @@ const AddVenta: React.FC = () => {
         }
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const [celRes, accRes, repRes, provRes] = await Promise.all([
-          axios.get<Celular[]>('http://localhost:3001/celulares/disponibles', config),
-          axios.get<Item[]>('http://localhost:3001/accesorios/disponibles', config),
-          axios.get<Reparacion[]>('http://localhost:3001/reparaciones', config),
-          axios.get<Proveedor[]>('http://localhost:3001/proveedores', config),
+          axios.get<Celular[]>('https://up-gestiondenegocio-production.up.railway.app/celulares/disponibles', config),
+          axios.get<Item[]>('https://up-gestiondenegocio-production.up.railway.app/accesorios/disponibles', config),
+          axios.get<Reparacion[]>('https://up-gestiondenegocio-production.up.railway.app/reparaciones', config),
+          axios.get<Proveedor[]>('https://up-gestiondenegocio-production.up.railway.app/proveedores', config),
         ]);
         setCelulares(celRes.data);
         setAccesorios(accRes.data);
@@ -258,7 +258,7 @@ const AddVenta: React.FC = () => {
         payload.fechaVenta = fechaVenta || null;
         payload.imei = imei;
       }
-      await axios.post('http://localhost:3001/ventas', payload, {
+      await axios.post('https://up-gestiondenegocio-production.up.railway.app/ventas', payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

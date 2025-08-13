@@ -109,10 +109,10 @@ const AdminVentas: React.FC = () => {
         setIsAdmin(true);
 
         const [ventasRes, proveedoresRes] = await Promise.all([
-          axios.get<Venta[]>("http://localhost:3001/ventas", {
+          axios.get<Venta[]>("https://up-gestiondenegocio-production.up.railway.app/ventas", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get<Proveedor[]>("http://localhost:3001/proveedores", {
+          axios.get<Proveedor[]>("https://up-gestiondenegocio-production.up.railway.app/proveedores", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -258,7 +258,7 @@ const AdminVentas: React.FC = () => {
       };
       delete dataToSend.proveedorNombre;
 
-      await axios.put(`http://localhost:3001/ventas/${editandoId}`, dataToSend, {
+      await axios.put(`https://up-gestiondenegocio-production.up.railway.app/ventas/${editandoId}`, dataToSend, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -290,7 +290,7 @@ const AdminVentas: React.FC = () => {
     if (!window.confirm("¿Estás seguro de eliminar esta venta?")) return;
     const token = localStorage.getItem("token") || "";
     try {
-      await axios.delete(`http://localhost:3001/ventas/${id}`, {
+      await axios.delete(`https://up-gestiondenegocio-production.up.railway.app/ventas/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setVentas((prev) => prev.filter((v) => v.id !== id));
