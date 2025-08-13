@@ -46,13 +46,19 @@ const PORT = process.env.PORT || 3001;
 async function startServer() {
   try {
     await sequelize.authenticate();
-    console.log('Conectado a la base de datos PostgreSQL');
+    console.log('✅ Conectado a la base de datos PostgreSQL');
+
+    // Crear/sincronizar tablas
+    await sequelize.sync({ alter: true }); 
+    console.log('✅ Tablas sincronizadas');
+
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en puerto ${PORT}`);
     });
   } catch (error) {
-    console.error('No se pudo conectar a la base de datos:', error);
+    console.error('❌ No se pudo conectar a la base de datos:', error);
   }
 }
+
 
 startServer();
