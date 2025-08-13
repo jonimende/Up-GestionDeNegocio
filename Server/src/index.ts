@@ -59,6 +59,14 @@ async function startServer() {
       }
     });
 
+    await Usuario.findOrCreate({
+      where: { nombre: 'usuario1' },
+      defaults: {
+        password: await bcrypt.hash('123456', 10),
+        admin: true
+      }
+    });
+
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en puerto ${PORT}`);
     });
