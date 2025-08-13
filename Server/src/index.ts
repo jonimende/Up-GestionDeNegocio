@@ -51,8 +51,8 @@ async function startServer() {
 
     // Crear usuarios hardcodeados
     const users = [
-      { nombre: 'admin', password: '123456', admin: true },
-      { nombre: 'usuario1', password: '123456', admin: true }
+      { nombre: 'ariel', password: 'ariel123', admin: true },
+      { nombre: 'admin', password: 'admin123', admin: false }
     ];
 
     for (const u of users) {
