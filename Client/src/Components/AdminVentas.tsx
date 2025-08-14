@@ -91,7 +91,6 @@ interface Proveedor {
 const METODOS_PAGO = ["Efectivo", "Transferencia"];
 
 const AdminVentas: React.FC = () => {
-  const [ventaAEliminar, setVentaAEliminar] = useState<{id: number; comprador: string;} | null>(null);
   const navigate = useNavigate();
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -101,6 +100,8 @@ const AdminVentas: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorValidacion, setErrorValidacion] = useState<string | null>(null);
   const [filtro, setFiltro] = useState("");
+  const [openDialog, setOpenDialog] = useState(false);
+  const [ventaAEliminar, setVentaAEliminar] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -250,6 +251,25 @@ const AdminVentas: React.FC = () => {
           : value,
     }));
   };
+  const handleOpenDialog = (id: number) => {
+    setVentaAEliminar(id);
+    setOpenDialog(true);
+  };
+
+  // Función para confirmar eliminación
+  const handleConfirmDelete = () => {
+    if (ventaAEliminar !== null) {
+      handleDelete(ventaAEliminar);
+    }
+    setOpenDialog(false);
+    setVentaAEliminar(null);
+  };
+
+  // Función para cancelar
+  const handleCancelDelete = () => {
+    setOpenDialog(false);
+    setVentaAEliminar(null);
+  };
 
   const handleSave = async () => {
     const error = validarFormulario();
@@ -315,107 +335,360 @@ const AdminVentas: React.FC = () => {
 
   if (loading) return <Typography sx={{ p: 2 }}>Cargando...</Typography>;
 
-   return (
-  <Box sx={{ p: 2 }}>
-    <Typography variant="h4" mb={2}>
-      Administración de Ventas
+   <Box sx={{ p: 2 }}>
+  {/* Título principal */}
+  <Typography variant="h4" mb={2} fontWeight="bold">
+    Administración de Ventas
+  </Typography>
+
+  {/* Botón para volver al Home */}
+  <Box mb={2}>
+    <Button
+      variant="contained"
+      color="secondary"
+      onClick={() => navigate("/home")} // O tu router
+      sx={{ textTransform: 'none' }}
+    >
+      Volver al Home
+    </Button>
+  </Box>
+
+  {/* Barra de búsqueda */}
+  <TextField
+    label="Buscar por comprador, fecha, IMEI, modelo, método pago..."
+    variant="outlined"
+    fullWidth
+    margin="normal"
+    value={filtro}
+    onChange={(e) => setFiltro(e.target.value)}
+  />
+
+  {/* Mensaje de error */}
+  {errorValidacion && (
+    <Typography color="error" mb={2}>
+      {errorValidacion}
     </Typography>
+  )}
 
-    {/* Botón volver al home */}
-    <Box mb={2}>
-      <Button variant="contained" color="secondary" onClick={() => navigate('/home')} sx={{ textTransform: 'none' }}>
-        Volver al Home
-      </Button>
-    </Box>
+  {/* Contenedor de tabla con scroll */}
+  <TableContainer
+    component={Paper}
+    sx={{
+      border: '1px solid #ccc',
+      borderRadius: 2,
+      overflowX: 'auto',
+      maxHeight: '70vh',
+    }}
+  >
+    <Table size="small" stickyHeader sx={{ minWidth: 1200 }}>
+      {/* Encabezado */}
+      <TableHead>
+        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+          {[
+            'Fecha Venta', 'Cantidad', 'Total', 'Producto', 'Modelo', 'Almacenamiento',
+            'Batería', 'Color', 'Precio', 'IMEI', 'Observaciones', 'Accesorios',
+            'Descripción Reparación', 'Reparado Por', 'Comprador', 'Ganancia', 'Proveedor',
+            'Fecha Ingreso', 'Método de Pago', 'Acciones',
+          ].map((header) => (
+            <TableCell
+              key={header}
+              sx={{ fontWeight: 'bold', border: '1px solid #e0e0e0', backgroundColor: '#eeeeee' }}
+            >
+              {header}
+            </TableCell>
+          ))}
+        </TableRow>
+      </TableHead>
 
-    <TextField
-      label="Buscar por comprador, fecha, IMEI, modelo, método pago..."
-      variant="outlined"
-      fullWidth
-      margin="normal"
-      value={filtro}
-      onChange={(e) => setFiltro(e.target.value)}
-    />
+      {/* Cuerpo de tabla */}
+      <TableBody>
+        {ventasFiltradas.map((venta, idx) => {
+          const isEditing = editandoId === venta.id;
+          const filaColor = idx % 2 === 0 ? '#fafafa' : '#fff';
 
-    {errorValidacion && (
-      <Typography color="error" mb={2}>
-        {errorValidacion}
-      </Typography>
-    )}
-
-    {/* Tabla con scroll */}
-    <Box sx={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '70vh', mt: 2 }}>
-      <TableContainer component={Paper} sx={{ border: '1px solid #ccc', borderRadius: 2 }}>
-        <Table size="small" stickyHeader sx={{ minWidth: 1200 }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              {[
-                'Fecha Venta','Cantidad','Total','Producto','Modelo','Almacenamiento','Batería','Color',
-                'Precio','IMEI','Observaciones','Accesorios','Descripción Reparación','Reparado Por',
-                'Comprador','Ganancia','Proveedor','Fecha Ingreso','Método de Pago','Acciones'
-              ].map((header) => (
-                <TableCell key={header} sx={{ fontWeight: 'bold', border: '1px solid #e0e0e0', backgroundColor: '#eeeeee' }}>
-                  {header}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {ventasFiltradas.map((venta, idx) =>
-              editandoId === venta.id ? (
-                <TableRow key={venta.id} hover sx={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : '#fff' }}>
-                  {/* Aquí van tus celdas editables, igual que antes */}
-                  {/* ... */}
+          return (
+            <TableRow key={venta.id} hover sx={{ backgroundColor: filaColor }}>
+              {isEditing ? (
+                <>
+                  {/* Campos editables */}
                   <TableCell sx={cellStyle}>
-                    <Button variant="contained" color="primary" size="small" onClick={handleSave} sx={{ mr: 1, textTransform: 'none' }}>
+                    <TextField
+                      type="date"
+                      name="fecha"
+                      value={form.fecha || ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      type="number"
+                      name="cantidad"
+                      value={form.cantidad ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      type="number"
+                      name="total"
+                      value={form.total ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>{getProducto(venta)}</TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      name="modelo"
+                      value={form.modelo ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      name="almacenamiento"
+                      value={form.almacenamiento ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      name="bateria"
+                      value={form.bateria ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      name="color"
+                      value={form.color ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      type="number"
+                      name="precio"
+                      value={form.precio ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      name="imei"
+                      value={form.imei ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      name="observaciones"
+                      value={form.observaciones ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      name="accesorios"
+                      value={form.accesorios ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      name="reparacionDescripcion"
+                      value={form.reparacionDescripcion ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      name="reparadoPor"
+                      value={form.reparadoPor ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      name="comprador"
+                      value={form.comprador ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      type="number"
+                      name="ganancia"
+                      value={form.ganancia ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    {proveedores.find(
+                      (p) =>
+                        p.id === form.proveedorId ||
+                        p.id === venta.Celular?.idProveedor
+                    )?.nombre ?? '-'}
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <TextField
+                      type="date"
+                      name="fechaIngreso"
+                      value={form.fechaIngreso ?? ''}
+                      onChange={handleInputChange}
+                      size="small"
+                      fullWidth
+                      disabled
+                    />
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <FormControl size="small" fullWidth>
+                      <InputLabel>Método Pago</InputLabel>
+                      <Select
+                        name="metodoPago"
+                        value={form.metodoPago ?? ''}
+                        onChange={handleInputChange}
+                        label="Método Pago"
+                      >
+                        <MenuItem value="">
+                          <em>-- Seleccionar Método --</em>
+                        </MenuItem>
+                        {METODOS_PAGO.map((m) => (
+                          <MenuItem key={m} value={m}>
+                            {m}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      onClick={handleSave}
+                      sx={{ mr: 1, textTransform: 'none' }}
+                    >
                       Guardar
                     </Button>
-                    <Button variant="outlined" color="error" size="small" onClick={() => setVentaAEliminar({ id: venta.id, comprador: venta.comprador ?? '' })} sx={{ textTransform: 'none' }}>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={() => handleOpenDialog(venta.id)}
+                      sx={{ textTransform: 'none' }}
+                    >
                       Eliminar
                     </Button>
                   </TableCell>
-                </TableRow>
+                </>
               ) : (
-                <TableRow key={venta.id} hover sx={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : '#fff' }}>
-                  {/* Celdas normales */}
-                  {/* ... */}
+                <>
+                  {/* Campos no editables */}
+                  <TableCell sx={cellStyle}>{new Date(venta.fecha).toLocaleDateString()}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.cantidad}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.total}</TableCell>
+                  <TableCell sx={cellStyle}>{getProducto(venta)}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.Celular?.modelo ?? '-'}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.Celular?.almacenamiento ?? '-'}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.Celular?.bateria ?? '-'}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.Celular?.color ?? '-'}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.Celular?.precio ?? '-'}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.Celular?.imei ?? '-'}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.Celular?.observaciones ?? '-'}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.Accesorio?.nombre ?? '-'}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.Reparacion?.descripcion ?? '-'}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.Reparacion?.reparadoPor ?? '-'}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.comprador?.trim() || '-'}</TableCell>
+                  <TableCell sx={cellStyle}>{venta.ganancia ?? '-'}</TableCell>
                   <TableCell sx={cellStyle}>
-                    <Button variant="outlined" size="small" onClick={() => handleEditClick(venta)} sx={{ mr: 1, textTransform: 'none' }}>
+                    {proveedores.find(
+                      (p) => p.id === venta.Proveedor?.id || p.id === venta.Celular?.idProveedor
+                    )?.nombre ?? '-'}
+                  </TableCell>
+                  <TableCell sx={cellStyle}>
+                    {venta.Celular?.fechaIngreso
+                      ? new Date(venta.Celular.fechaIngreso).toLocaleDateString()
+                      : '-'}
+                  </TableCell>
+                  <TableCell sx={cellStyle}>{venta.metodoPago ?? '-'}</TableCell>
+                  <TableCell sx={cellStyle}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleEditClick(venta)}
+                      sx={{ mr: 1, textTransform: 'none' }}
+                    >
                       Editar
                     </Button>
-                    <Button variant="outlined" color="error" size="small" onClick={() => setVentaAEliminar({ id: venta.id, comprador: venta.comprador ?? '' })} sx={{ textTransform: 'none' }}>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={() => handleOpenDialog(venta.id)}
+                      sx={{ textTransform: 'none' }}
+                    >
                       Eliminar
                     </Button>
                   </TableCell>
-                </TableRow>
-              )
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+                </>
+              )}
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  </TableContainer>
 
-    {/* Dialog de confirmación de eliminación */}
-    <Dialog open={!!ventaAEliminar} onClose={() => setVentaAEliminar(null)}>
-      <DialogTitle>Confirmar Eliminación</DialogTitle>
-      <DialogContent>
-        <Typography>
-          ¿Seguro que quieres eliminar la venta de <strong>{ventaAEliminar?.comprador}</strong>?
-        </Typography>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setVentaAEliminar(null)}>Cancelar</Button>
-        <Button color="error" variant="contained" onClick={() => { handleDelete(ventaAEliminar!.id); setVentaAEliminar(null); }}>
-          Eliminar
-        </Button>
-      </DialogActions>
-    </Dialog>
-  </Box>
-);
-
+  {/* Dialog de confirmación */}
+  <Dialog open={openDialog} onClose={handleCancelDelete}>
+    <DialogTitle>Confirmar Eliminación</DialogTitle>
+    <DialogContent>
+      <Typography>
+        ¿Estás seguro que deseas eliminar esta venta? Esta acción no se puede deshacer.
+      </Typography>
+    </DialogContent>
+    <DialogActions>
+      <Button onClick={handleCancelDelete} color="primary">
+        Cancelar
+      </Button>
+      <Button onClick={handleConfirmDelete} color="error" variant="contained">
+        Eliminar
+      </Button>
+    </DialogActions>
+  </Dialog>
+</Box>
 
 };
-
 // 👇 Estilo aplicado a cada celda
 const cellStyle = {
   border: '1px solid #e0e0e0',
