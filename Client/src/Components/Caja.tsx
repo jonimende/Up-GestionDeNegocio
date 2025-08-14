@@ -540,7 +540,38 @@ return (
         </>
       )}
     </Paper>
+
+    {/* Confirmación de eliminación */}
+    <Dialog open={confirmOpen} onClose={handleCancelDelete}>
+      <DialogTitle>Confirmar eliminación</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          ¿Estás seguro que deseas eliminar este movimiento? Esta acción no se puede deshacer.
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleCancelDelete} color="primary">
+          Cancelar
+        </Button>
+        <Button onClick={handleConfirmDelete} color="error" variant="contained" autoFocus>
+          Eliminar
+        </Button>
+      </DialogActions>
+    </Dialog>
+
+    {/* Snackbar */}
+    <Snackbar
+      open={snackbar.open}
+      autoHideDuration={4000}
+      onClose={handleCloseSnackbar}
+      anchorOrigin={{ vertical: "top", horizontal: "center" }}
+    >
+      <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
+        {snackbar.message}
+      </Alert>
+    </Snackbar>
   </>
 );
+
 };
 export default Caja;
