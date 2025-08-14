@@ -379,6 +379,7 @@ const AdminVentas: React.FC = () => {
       <Table>
         <TableHead>
           <TableRow>
+            <TableCell sx={cellStyle}>Celular</TableCell>
             <TableCell sx={cellStyle}>Fecha</TableCell>
             <TableCell sx={cellStyle}>Comprador</TableCell>
             <TableCell sx={cellStyle}>Total</TableCell>
@@ -398,6 +399,7 @@ const AdminVentas: React.FC = () => {
                   sx={{ cursor: "pointer" }}
                   onClick={() => setExpandedVentaId(isExpanded ? null : venta.id)}
                 >
+                  <TableCell>{venta.Celular?.modelo}</TableCell>
                   <TableCell>{new Date(venta.fecha).toLocaleDateString()}</TableCell>
                   <TableCell>{venta.comprador}</TableCell>
                   <TableCell>${venta.total}</TableCell>
