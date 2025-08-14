@@ -236,9 +236,13 @@ const AdminVentas: React.FC = () => {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>
+    e:
+      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      | SelectChangeEvent<string>
+      | SelectChangeEvent<number>
   ) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target as { name: string; value: unknown };
+
     setForm((prev) => ({
       ...prev,
       [name]:
@@ -248,9 +252,7 @@ const AdminVentas: React.FC = () => {
         name === "idProveedor" ||
         name === "precio" ||
         name === "proveedorId"
-          ? isNaN(Number(value))
-            ? value
-            : Number(value)
+          ? Number(value)
           : value,
     }));
   };
@@ -341,85 +343,226 @@ const AdminVentas: React.FC = () => {
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="h4" mb={2} fontWeight="bold">
-        Administración de Ventas
-      </Typography>
-
-      <Box mb={2}>
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={() => navigate("/home")}
-          sx={{ textTransform: "none" }}
-        >
-          Volver al Home
-        </Button>
-      </Box>
-
-      <TextField
-        label="Buscar por comprador, fecha, IMEI, modelo, método pago..."
-        variant="outlined"
-        fullWidth
-        margin="normal"
-        value={filtro}
-        onChange={(e) => setFiltro(e.target.value)}
-      />
-
       {errorValidacion && (
-        <Typography color="error" mb={2}>
+        <Typography color="error" sx={{ mb: 2 }}>
           {errorValidacion}
         </Typography>
       )}
-
-      <TableContainer
-        component={Paper}
-        sx={{ border: "1px solid #ccc", borderRadius: 2, overflowX: "auto", maxHeight: "70vh" }}
-      >
-        <Table size="small" stickyHeader sx={{ minWidth: 1200 }}>
+      <TableContainer component={Paper}>
+        <Table>
           <TableHead>
-            <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
-              {[
-                "Fecha Venta",
-                "Cantidad",
-                "Total",
-                "Producto",
-                "Modelo",
-                "Almacenamiento",
-                "Batería",
-                "Color",
-                "Precio",
-                "IMEI",
-                "Observaciones",
-                "Accesorios",
-                "Descripción Reparación",
-                "Reparado Por",
-                "Comprador",
-                "Ganancia",
-                "Proveedor",
-                "Fecha Ingreso",
-                "Método de Pago",
-                "Acciones",
-              ].map((header) => (
-                <TableCell
-                  key={header}
-                  sx={{ fontWeight: "bold", border: "1px solid #e0e0e0", backgroundColor: "#eeeeee" }}
-                >
-                  {header}
-                </TableCell>
-              ))}
+            <TableRow>
+              <TableCell sx={cellStyle}>Fecha</TableCell>
+              <TableCell sx={cellStyle}>Cantidad</TableCell>
+              <TableCell sx={cellStyle}>Total</TableCell>
+              <TableCell sx={cellStyle}>Método de pago</TableCell>
+              <TableCell sx={cellStyle}>Comprador</TableCell>
+              <TableCell sx={cellStyle}>Producto</TableCell>
+              <TableCell sx={cellStyle}>Proveedor</TableCell>
+              <TableCell sx={cellStyle}>Modelo</TableCell>
+              <TableCell sx={cellStyle}>Almacenamiento</TableCell>
+              <TableCell sx={cellStyle}>Batería</TableCell>
+              <TableCell sx={cellStyle}>Color</TableCell>
+              <TableCell sx={cellStyle}>Precio</TableCell>
+              <TableCell sx={cellStyle}>Observaciones</TableCell>
+              <TableCell sx={cellStyle}>IMEI</TableCell>
+              <TableCell sx={cellStyle}>Fecha Ingreso</TableCell>
+              <TableCell sx={cellStyle}>Accesorio</TableCell>
+              <TableCell sx={cellStyle}>Descripción Reparación</TableCell>
+              <TableCell sx={cellStyle}>Reparado Por</TableCell>
+              <TableCell sx={cellStyle}>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {ventasFiltradas.map((venta, idx) => {
+            {ventasFiltradas.map((venta) => {
               const isEditing = editandoId === venta.id;
-              const filaColor = idx % 2 === 0 ? "#fafafa" : "#fff";
-
               return (
-                <TableRow key={venta.id} hover sx={{ backgroundColor: filaColor }}>
+                <TableRow key={venta.id}>
                   {isEditing ? (
                     <>
-                      {/* Aquí van tus campos editables como antes */}
-                      {/* Por brevedad se omite, pero pegá todos tus TextFields aquí */}
+                      {/* Fecha */}
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="fecha"
+                          type="date"
+                          size="small"
+                          value={form.fecha || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+
+                      {/* Cantidad */}
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="cantidad"
+                          type="number"
+                          size="small"
+                          value={form.cantidad ?? ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+
+                      {/* Total */}
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="total"
+                          type="number"
+                          size="small"
+                          value={form.total ?? ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+
+                      {/* Método de pago */}
+                      <TableCell sx={cellStyle}>
+                        <Select
+                          name="metodoPago"
+                          size="small"
+                          value={form.metodoPago || ""}
+                          onChange={handleInputChange}
+                          displayEmpty
+                        >
+                          <MenuItem value="">
+                            <em>Seleccionar</em>
+                          </MenuItem>
+                          {METODOS_PAGO.map((m) => (
+                            <MenuItem key={m} value={m}>
+                              {m}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </TableCell>
+
+                      {/* Comprador */}
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="comprador"
+                          size="small"
+                          value={form.comprador || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+
+                      {/* Producto */}
+                      <TableCell sx={cellStyle}>{getProducto(venta)}</TableCell>
+
+                      {/* Proveedor */}
+                      <TableCell sx={cellStyle}>
+                        <Select
+                          name="proveedorId"
+                          size="small"
+                          value={form.proveedorId ?? ""}
+                          onChange={handleInputChange}
+                          displayEmpty
+                        >
+                          <MenuItem value="">
+                            <em>Seleccionar</em>
+                          </MenuItem>
+                          {proveedores.map((p) => (
+                            <MenuItem key={p.id} value={p.id}>
+                              {p.nombre}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </TableCell>
+
+                      {/* Campos Celular */}
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="modelo"
+                          size="small"
+                          value={form.modelo || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="almacenamiento"
+                          size="small"
+                          value={form.almacenamiento || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="bateria"
+                          size="small"
+                          value={form.bateria || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="color"
+                          size="small"
+                          value={form.color || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="precio"
+                          type="number"
+                          size="small"
+                          value={form.precio ?? ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="observaciones"
+                          size="small"
+                          value={form.observaciones || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="imei"
+                          size="small"
+                          value={form.imei || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="fechaIngreso"
+                          type="date"
+                          size="small"
+                          value={form.fechaIngreso || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+
+                      {/* Campos Accesorio */}
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="accesorios"
+                          size="small"
+                          value={form.accesorios || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+
+                      {/* Campos Reparación */}
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="reparacionDescripcion"
+                          size="small"
+                          value={form.reparacionDescripcion || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        <TextField
+                          name="reparadoPor"
+                          size="small"
+                          value={form.reparadoPor || ""}
+                          onChange={handleInputChange}
+                        />
+                      </TableCell>
+
+                      {/* Acciones */}
                       <TableCell sx={cellStyle}>
                         <Button
                           variant="contained"
@@ -443,37 +586,56 @@ const AdminVentas: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      {/* Aquí van tus campos no editables */}
-                      <TableCell sx={cellStyle}>{new Date(venta.fecha).toLocaleDateString()}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.cantidad}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.total}</TableCell>
-                      <TableCell sx={cellStyle}>{getProducto(venta)}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.Celular?.modelo ?? "-"}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.Celular?.almacenamiento ?? "-"}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.Celular?.bateria ?? "-"}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.Celular?.color ?? "-"}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.Celular?.precio ?? "-"}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.Celular?.imei ?? "-"}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.Celular?.observaciones ?? "-"}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.Accesorio?.nombre ?? "-"}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.Reparacion?.descripcion ?? "-"}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.Reparacion?.reparadoPor ?? "-"}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.comprador?.trim() || "-"}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.ganancia ?? "-"}</TableCell>
                       <TableCell sx={cellStyle}>
-                        {proveedores.find(
-                          (p) => p.id === venta.Proveedor?.id || p.id === venta.Celular?.idProveedor
-                        )?.nombre ?? "-"}
+                        {new Date(venta.fecha).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell sx={cellStyle}>{venta.cantidad}</TableCell>
+                      <TableCell sx={cellStyle}>${venta.total}</TableCell>
+                      <TableCell sx={cellStyle}>{venta.metodoPago}</TableCell>
+                      <TableCell sx={cellStyle}>{venta.comprador}</TableCell>
+                      <TableCell sx={cellStyle}>{getProducto(venta)}</TableCell>
+                      <TableCell sx={cellStyle}>
+                        {venta.Proveedor?.nombre || "-"}
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        {venta.Celular?.modelo || "-"}
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        {venta.Celular?.almacenamiento || "-"}
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        {venta.Celular?.bateria || "-"}
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        {venta.Celular?.color || "-"}
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        {venta.Celular?.precio ?? "-"}
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        {venta.Celular?.observaciones || "-"}
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        {venta.Celular?.imei || "-"}
                       </TableCell>
                       <TableCell sx={cellStyle}>
                         {venta.Celular?.fechaIngreso
                           ? new Date(venta.Celular.fechaIngreso).toLocaleDateString()
                           : "-"}
                       </TableCell>
-                      <TableCell sx={cellStyle}>{venta.metodoPago ?? "-"}</TableCell>
+                      <TableCell sx={cellStyle}>
+                        {venta.Accesorio?.nombre || "-"}
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        {venta.Reparacion?.descripcion || "-"}
+                      </TableCell>
+                      <TableCell sx={cellStyle}>
+                        {venta.Reparacion?.reparadoPor || "-"}
+                      </TableCell>
                       <TableCell sx={cellStyle}>
                         <Button
-                          variant="outlined"
+                          variant="contained"
+                          color="secondary"
                           size="small"
                           onClick={() => handleEditClick(venta)}
                           sx={{ mr: 1, textTransform: "none" }}
@@ -498,7 +660,6 @@ const AdminVentas: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
       <Dialog open={openDialog} onClose={handleCancelDelete}>
         <DialogTitle>Confirmar eliminación</DialogTitle>
         <DialogContent>
