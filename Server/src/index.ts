@@ -49,22 +49,6 @@ async function startServer() {
     await sequelize.sync({ alter: true }); 
     console.log('✅ Tablas sincronizadas');
 
-    // Crear usuarios hardcodeados
-    const users = [
-      { nombre: 'ariel', password: 'ariel123', admin: true },
-      { nombre: 'admin', password: 'admin123', admin: false }
-    ];
-
-    for (const u of users) {
-      await Usuario.findOrCreate({
-        where: { nombre: u.nombre },
-        defaults: {
-          password: await bcrypt.hash(u.password, 10),
-          admin: u.admin
-        }
-      });
-    }
-
     console.log('👤 Usuarios seed creados');
 
     app.listen(PORT, () => {

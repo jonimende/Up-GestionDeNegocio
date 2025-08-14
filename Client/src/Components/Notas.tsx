@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -10,6 +11,10 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
 } from "@mui/material";
 
 interface Nota {
@@ -19,9 +24,13 @@ interface Nota {
 }
 
 const Notas = () => {
+  const navigate = useNavigate();
+
   const [notas, setNotas] = useState<Nota[]>([]);
   const [nuevaNota, setNuevaNota] = useState("");
   const [loading, setLoading] = useState(false);
+  const [notaAEliminar, setNotaAEliminar] = useState<{id: number;contenido: string;createdAt: string;} | null>(null);
+
 
   const cargarNotas = async () => {
     try {
@@ -60,66 +69,106 @@ const Notas = () => {
   }, []);
 
   return (
-    <Paper sx={{ maxWidth: 600, mx: "auto", p: 4, mt: 4, borderRadius: 3 }}>
-      <Typography
-        variant="h4"
-        component="h1"
-        gutterBottom
-        align="center"
-        sx={{ color: "#1565c0", fontWeight: "bold" }}
+  <Paper sx={{ maxWidth: 600, mx: "auto", p: 4, mt: 4, borderRadius: 3 }}>
+    {/* Botón Volver al Home */}
+    <Box sx={{ mb: 3 }}>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={() => navigate("/home")} // asegurate de tener `const navigate = useNavigate();`
       >
-        Notas
-      </Typography>
+        Volver al Home
+      </Button>
+    </Box>
 
-      <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          label="Nueva Nota"
-          value={nuevaNota}
-          onChange={(e) => setNuevaNota(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") agregarNota();
+    <Typography
+      variant="h4"
+      component="h1"
+      gutterBottom
+      align="center"
+      sx={{ color: "#1565c0", fontWeight: "bold" }}
+    >
+      Notas
+    </Typography>
+
+    <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+      <TextField
+        fullWidth
+        variant="outlined"
+        label="Nueva Nota"
+        value={nuevaNota}
+        onChange={(e) => setNuevaNota(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") agregarNota();
+        }}
+        disabled={loading}
+      />
+      <Button variant="contained" color="primary" onClick={agregarNota} disabled={loading}>
+        Agregar
+      </Button>
+    </Box>
+
+    <List>
+      {notas.length === 0 && !loading && (
+        <Typography align="center" color="text.secondary">
+          No hay notas para mostrar.
+        </Typography>
+      )}
+
+      {notas.map((nota) => (
+        <div key={nota.id}>
+          <ListItem
+            secondaryAction={
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={() => setNotaAEliminar(nota)} // abrimos el dialog
+              >
+                Eliminar
+              </Button>
+            }
+          >
+            <ListItemText
+              primary={nota.contenido}
+              secondary={new Date(nota.createdAt).toLocaleString()}
+            />
+          </ListItem>
+          <Divider component="li" />
+        </div>
+      ))}
+    </List>
+
+    {/* Dialog de confirmación */}
+    <Dialog
+      open={!!notaAEliminar}
+      onClose={() => setNotaAEliminar(null)}
+    >
+      <DialogTitle sx={{ color: "error.main" }}>Confirmar Eliminación</DialogTitle>
+      <DialogContent>
+        <Typography>
+          ¿Estás seguro que deseas eliminar esta nota?
+        </Typography>
+        <Typography sx={{ mt: 1, fontStyle: "italic" }}>
+          "{notaAEliminar?.contenido}"
+        </Typography>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setNotaAEliminar(null)}>Cancelar</Button>
+        <Button
+          variant="contained"
+          color="error"
+          onClick={() => {
+            eliminarNota(notaAEliminar!.id);
+            setNotaAEliminar(null);
           }}
-          disabled={loading}
-        />
-        <Button variant="contained" color="primary" onClick={agregarNota} disabled={loading}>
-          Agregar
+        >
+          Eliminar
         </Button>
-      </Box>
-
-      <List>
-        {notas.length === 0 && !loading && (
-          <Typography align="center" color="text.secondary">
-            No hay notas para mostrar.
-          </Typography>
-        )}
-
-        {notas.map((nota) => (
-          <div key={nota.id}>
-            <ListItem
-              secondaryAction={
-                <Button
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  onClick={() => eliminarNota(nota.id)}
-                >
-                  Eliminar
-                </Button>
-              }
-            >
-              <ListItemText
-                primary={nota.contenido}
-                secondary={new Date(nota.createdAt).toLocaleString()}
-              />
-            </ListItem>
-            <Divider component="li" />
-          </div>
-        ))}
-      </List>
-    </Paper>
-  );
+      </DialogActions>
+    </Dialog>
+  </Paper>
+);
 };
 
 export default Notas;

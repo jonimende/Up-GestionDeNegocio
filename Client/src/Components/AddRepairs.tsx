@@ -1,4 +1,5 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   TextField,
   Button,
@@ -17,6 +18,8 @@ interface DecodedToken {
 }
 
 const AddReparacion: React.FC = () => {
+  const navigate = useNavigate();
+
   const [descripcion, setDescripcion] = useState('');
   const [valor, setValor] = useState('');
   const [reparadoPor, setReparadoPor] = useState('');
@@ -173,6 +176,10 @@ const AddReparacion: React.FC = () => {
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
         <Button variant="contained" color="primary" onClick={handleSubmit}>
         Guardar
+        </Button>
+
+        <Button variant="outlined" color="secondary" onClick={() => navigate("/home")}>
+          Volver al Home
         </Button>
       </Box>
     </Paper>
