@@ -393,30 +393,35 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
       boxShadow={1}
     >
       {!tipo ? (
-        <Box textAlign="center">
+        <Box textAlign="center" sx={{ mt: 4 }}>
           <Typography variant="h5" fontWeight="bold" mb={3}>
             Agregar Stock
           </Typography>
+
+          <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => setTipo("celular")}
+              sx={{ minWidth: 150 }}
+            >
+              Agregar Celular
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => setTipo("accesorio")}
+              sx={{ minWidth: 150 }}
+            >
+              Agregar Accesorio
+            </Button>
+          </Box>
+
           <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setTipo("celular")}
-            sx={{ mr: 2 }}
-          >
-            Agregar Celular
-          </Button>
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={() => setTipo("accesorio")}
-          >
-            Agregar Accesorio
-          </Button>
-           <Button
             variant="outlined"
             color="secondary"
-            sx={{ mt: 2 }}
-           onClick={() => navigate("/home")}
+            onClick={() => navigate("/home")}
+            sx={{ mt: 1, minWidth: 150 }}
           >
             Volver al Home
           </Button>
