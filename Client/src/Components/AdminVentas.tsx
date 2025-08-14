@@ -342,12 +342,16 @@ const AdminVentas: React.FC = () => {
   if (loading) return <Typography sx={{ p: 2 }}>Cargando...</Typography>;
 
   return (
-    <Box sx={{ p: 2 }}>
-      {errorValidacion && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {errorValidacion}
-        </Typography>
-      )}
+    <Box sx={{ p: 2 }}> 
+    <Typography variant="h4" mb={2} fontWeight="bold"> Administración de Ventas </Typography> 
+    <Box mb={2}> 
+      <Button variant="contained" color="secondary" onClick={() => navigate("/home")} sx={{ textTransform: "none" }} 
+        > Volver al Inicio 
+        </Button> 
+    </Box> 
+    <TextField label="Buscar por comprador, fecha, IMEI, modelo, método pago..." 
+    variant="outlined" fullWidth margin="normal" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
+       {errorValidacion && ( <Typography color="error" mb={2}> {errorValidacion} </Typography> )}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
