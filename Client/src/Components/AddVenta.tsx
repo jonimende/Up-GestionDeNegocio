@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Typography,
@@ -54,6 +55,8 @@ function isAxiosError(error: any): error is { isAxiosError: boolean; response?: 
 }
 
 const AddVenta: React.FC = () => {
+  const navigate = useNavigate();
+
   const [celulares, setCelulares] = useState<Celular[]>([]);
   const [accesorios, setAccesorios] = useState<Item[]>([]);
   const [reparaciones, setReparaciones] = useState<Reparacion[]>([]);
@@ -597,6 +600,16 @@ const AddVenta: React.FC = () => {
           <Button type="submit" variant="contained" fullWidth disabled={loading}>
             {loading ? <CircularProgress size={24} color="inherit" /> : 'Agregar Venta'}
           </Button>
+          
+          <Button
+          variant="outlined"
+          fullWidth
+          color="secondary"
+          sx={{ mt: 2 }}
+          onClick={() => navigate("/home")}
+        >
+          Volver al Home
+        </Button>
         </Box>
       </Paper>
     </Container>

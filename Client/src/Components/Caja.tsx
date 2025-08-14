@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import {
@@ -57,6 +58,8 @@ interface CurrencyResponse {
 }
 
 const Caja = () => {
+  const navigate = useNavigate();
+
   const [tipo, setTipo] = useState<"diaria" | "mensual">("diaria");
   const [metodoPago, setMetodoPago] = useState<"Efectivo" | "Transferencia" | "Todos">("Todos");
   const [total, setTotal] = useState<number>(0);
@@ -305,7 +308,7 @@ const Caja = () => {
     );
   }
 
- return (
+return (
   <>
     <Paper
       elevation={3}
@@ -316,24 +319,28 @@ const Caja = () => {
         mt: 5,
         borderRadius: 3,
         fontFamily: "'Roboto', sans-serif",
+        backgroundColor: "#f9f9f9",
       }}
     >
+      {/* Título principal */}
       <Typography
         variant="h5"
         gutterBottom
         align="center"
-        sx={{ color: "#1565c0", fontWeight: "bold" }}
+        sx={{ color: "#1565c0", fontWeight: "bold", mb: 3 }}
       >
         Caja {tipo === "diaria" ? "Diaria" : "Mensual"}
       </Typography>
 
+      {/* Error general */}
       {error && (
         <Typography color="error" variant="body2" align="center" sx={{ mb: 2 }}>
           {error}
         </Typography>
       )}
 
-      <Box display="flex" gap={2} mt={3}>
+      {/* Filtros */}
+      <Box display="flex" gap={2} mt={2}>
         <FormControl fullWidth disabled={!isAdmin}>
           <InputLabel>Tipo</InputLabel>
           <Select value={tipo} label="Tipo" onChange={(e) => setTipo(e.target.value as any)}>
@@ -356,49 +363,51 @@ const Caja = () => {
         </FormControl>
       </Box>
 
-      <Box mt={4}>
-        <Typography variant="h6" align="center">
+      {/* Totales */}
+      <Box mt={4} textAlign="center">
+        <Typography variant="h6">
           Total generado (USD): <strong>${total.toFixed(2)}</strong>
         </Typography>
 
         {isAdmin && (
           <>
-            <Typography variant="body1" align="center" sx={{ mt: 1 }}>
+            <Typography variant="body1" sx={{ mt: 1 }}>
               Celulares: <strong>${celularesData.total.toFixed(2)}</strong> ({celularesData.cantidad} ventas)
             </Typography>
-            <Typography variant="body1" align="center">
+            <Typography variant="body1">
               Accesorios: <strong>${accesoriosData.total.toFixed(2)}</strong> ({accesoriosData.cantidad} ventas)
             </Typography>
 
-            <Typography variant="h6" align="center" sx={{ mt: 2 }}>
+            <Typography variant="h6" sx={{ mt: 2 }}>
               Total neto (USD): <strong>${totalNeto.toFixed(2)}</strong>
             </Typography>
 
             {totalEnPesos !== null && tasaCambio !== null && (
-              <Typography variant="h6" align="center" sx={{ color: "green", mt: 1 }}>
+              <Typography variant="body1" sx={{ color: "green", mt: 1 }}>
                 Total en pesos (ARS): <strong>${totalEnPesos.toFixed(2)}</strong> <br />
-                <small>Tasa de cambio usada: {tasaCambio.toFixed(4)} ARS / USD</small>
+                <small>Tasa usada: {tasaCambio.toFixed(4)} ARS / USD</small>
               </Typography>
             )}
 
             {errorConversion && (
-              <Typography variant="body2" color="error" align="center" mt={1}>
+              <Typography variant="body2" color="error" sx={{ mt: 1 }}>
                 {errorConversion}
               </Typography>
             )}
 
-            <Typography variant="subtitle1" align="center">
+            <Typography variant="subtitle1" sx={{ mt: 1 }}>
               Ventas realizadas: {cantidad}
             </Typography>
 
-            <Typography variant="h6" align="center" mt={3}>
+            <Typography variant="h6" sx={{ mt: 2 }}>
               Balance actual: <strong>${balance.toFixed(2)}</strong> USD
             </Typography>
           </>
         )}
       </Box>
 
-      <Box display="flex" justifyContent="center" gap={2} mt={3}>
+      {/* Botones principales */}
+      <Box display="flex" justifyContent="center" gap={2} mt={3} flexWrap="wrap">
         <Button variant="contained" color="primary" onClick={obtenerCaja}>
           Actualizar caja
         </Button>
@@ -409,10 +418,17 @@ const Caja = () => {
         )}
       </Box>
 
+      {/* 🔹 NUEVO BOTÓN: Volver al Home */}
+      <Box textAlign="center" mt={3}>
+        <Button variant="text" color="inherit" onClick={() => navigate("/home")}>
+          ← Volver al Home
+        </Button>
+      </Box>
+
       {isAdmin && (
         <>
           {/* Formulario para registrar gasto/retiro */}
-          <Paper elevation={2} sx={{ mt: 5, p: 3, maxWidth: 600, mx: "auto", borderRadius: 2 }}>
+          <Paper elevation={2} sx={{ mt: 5, p: 3, maxWidth: 600, mx: "auto", borderRadius: 2, backgroundColor: "#fff" }}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
               Registrar gasto o retiro
             </Typography>
@@ -524,36 +540,6 @@ const Caja = () => {
         </>
       )}
     </Paper>
-
-    {/* Confirmación de eliminación */}
-    <Dialog open={confirmOpen} onClose={handleCancelDelete}>
-      <DialogTitle>Confirmar eliminación</DialogTitle>
-      <DialogContent>
-        <DialogContentText>
-          ¿Estás seguro que deseas eliminar este movimiento? Esta acción no se puede deshacer.
-        </DialogContentText>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleCancelDelete} color="primary">
-          Cancelar
-        </Button>
-        <Button onClick={handleConfirmDelete} color="error" variant="contained" autoFocus>
-          Eliminar
-        </Button>
-      </DialogActions>
-    </Dialog>
-
-    {/* Snackbar */}
-    <Snackbar
-      open={snackbar.open}
-      autoHideDuration={4000}
-      onClose={handleCloseSnackbar}
-      anchorOrigin={{ vertical: "top", horizontal: "center" }}
-    >
-      <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
-        {snackbar.message}
-      </Alert>
-    </Snackbar>
   </>
 );
 };

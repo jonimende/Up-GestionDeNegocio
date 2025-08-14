@@ -1,4 +1,5 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -53,6 +54,8 @@ type AccesorioForm = {
 };
 
 const AddStock: React.FC<Props> = ({ onClose }) => {
+  const navigate = useNavigate();
+
   const [tipo, setTipo] = useState<null | "celular" | "accesorio">(null);
   const [reparaciones, setReparaciones] = useState<Reparacion[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -630,6 +633,15 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
               {loading ? "Guardando..." : "Guardar Accesorio"}
             </Button>
           </Box>
+
+          <Button
+            variant="outlined"
+            color="secondary"
+            sx={{ mt: 2 }}
+           onClick={() => navigate("/home")}
+          >
+            Volver al Home
+          </Button>
         </>
       )}
 

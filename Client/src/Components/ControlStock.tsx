@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
-
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -54,7 +54,8 @@ interface Accesorio {
 }
 
 const ControlDeStock: React.FC = () => {
-  // Estados generales
+  const navigate = useNavigate();
+
   const [celulares, setCelulares] = useState<Celular[]>([]);
   const [accesorios, setAccesorios] = useState<Accesorio[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -62,6 +63,8 @@ const ControlDeStock: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [filtro, setFiltro] = useState("");
+
+  const [elementoAEliminar, setElementoAEliminar] = useState<{tipo: "celular" | "accesorio"; nombre: string;id: number;} | null>(null);
 
   // Estados para edición
   const [celularSeleccionado, setCelularSeleccionado] = useState<Celular | null>(null);
@@ -238,6 +241,17 @@ const ControlDeStock: React.FC = () => {
 
   return (
     <Box p={6} maxWidth="1200px" margin="0 auto">
+      {/* Botón Volver al Home */}
+      <Box mb={3}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => navigate("/home")} // Asegúrate de tener `useNavigate`
+        >
+          Volver al Home
+        </Button>
+      </Box>
+
       <Typography variant="h4" fontWeight="bold" mb={4}>
         Control de Stock
       </Typography>
@@ -313,7 +327,14 @@ const ControlDeStock: React.FC = () => {
                         variant="contained"
                         color="error"
                         size="small"
-                        onClick={() => eliminarCelular(celular.id)}
+                        sx={{ mr: 1 }}
+                        onClick={() => {
+                          setElementoAEliminar({
+                            tipo: "celular",
+                            nombre: celular.modelo,
+                            id: celular.id,
+                          });
+                        }}
                       >
                         Eliminar
                       </Button>
@@ -327,7 +348,7 @@ const ControlDeStock: React.FC = () => {
       </Box>
 
       {/* Accesorios */}
-      <Box>
+      <Box mb={6}>
         <Typography variant="h5" fontWeight="semibold" mb={2}>
           Accesorios Disponibles
         </Typography>
@@ -365,7 +386,13 @@ const ControlDeStock: React.FC = () => {
                         variant="contained"
                         color="error"
                         size="small"
-                        onClick={() => eliminarAccesorio(accesorio.id)}
+                        onClick={() => {
+                          setElementoAEliminar({
+                            tipo: "accesorio",
+                            nombre: accesorio.nombre,
+                            id: accesorio.id,
+                          });
+                        }}
                       >
                         Eliminar
                       </Button>
@@ -378,6 +405,40 @@ const ControlDeStock: React.FC = () => {
         )}
       </Box>
 
+      {/* Modal de confirmación de eliminación */}
+      <Dialog
+        open={!!elementoAEliminar}
+        onClose={() => setElementoAEliminar(null)}
+      >
+        <DialogTitle sx={{ color: "error.main" }}>
+          Confirmar Eliminación
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            ¿Estás seguro que deseas eliminar{" "}
+            <strong>{elementoAEliminar?.nombre}</strong>?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setElementoAEliminar(null)}>Cancelar</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => {
+              if (elementoAEliminar?.tipo === "celular") {
+                eliminarCelular(elementoAEliminar.id);
+              } else if (elementoAEliminar?.tipo === "accesorio") {
+                eliminarAccesorio(elementoAEliminar.id);
+              }
+              setElementoAEliminar(null);
+            }}
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modales de edición */}
       {/* Modal edición celular */}
       <Dialog
         open={!!celularSeleccionado}
