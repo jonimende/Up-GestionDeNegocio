@@ -1,7 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { Box, Button, Typography, CircularProgress } from "@mui/material";
+import {
+  Box,
+  Button,
+  Typography,
+  CircularProgress,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+
+// Importar íconos de Material UI
+import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
+import ReceiptIcon from "@mui/icons-material/Receipt";
+import InventoryIcon from "@mui/icons-material/Inventory";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import StoreIcon from "@mui/icons-material/Store";
+import NotesIcon from "@mui/icons-material/Notes";
+import BuildIcon from "@mui/icons-material/Build";
 
 interface DecodedToken {
   id: number;
@@ -43,15 +57,17 @@ const Home: React.FC = () => {
     verificarToken();
   }, [navigate]);
 
-  if (loading)
+  if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
         <CircularProgress />
       </Box>
     );
+  }
 
   if (!authenticated) return null;
 
+  // Handlers de navegación
   const handleAgregarVenta = () => navigate("/ventas/nuevo");
   const handleVerNotas = () => navigate("/notas");
   const handleAgregarStock = () => navigate("/stock/nuevo");
@@ -60,28 +76,33 @@ const Home: React.FC = () => {
   const handleCaja = () => navigate("/ventas/caja");
   const handleAgregarReparacion = () => navigate("/admin/reparaciones");
 
-  // Botón del sidebar
+  // Función para renderizar botones con ícono y animación hover
   const SidebarButton = ({
     text,
+    icon,
     onClick,
-    color = "#1976d2",
+    color = "primary",
+    variant = "contained",
   }: {
     text: string;
+    icon: React.ReactNode;
     onClick: () => void;
-    color?: string;
+    color?: "primary" | "secondary" | "error" | "success" | "warning" | "info";
+    variant?: "contained" | "outlined";
   }) => (
     <Button
+      startIcon={icon}
+      variant={variant}
+      color={color}
       onClick={onClick}
-      fullWidth
       sx={{
-        bgcolor: color,
-        color: "#fff",
+        justifyContent: "flex-start",
         textTransform: "none",
-        fontWeight: 600,
-        py: 1.5,
-        mb: 1.5,
-        borderRadius: 2,
-        "&:hover": { bgcolor: "#115293", transform: "translateX(5px)" },
+        transition: "all 0.3s",
+        "&:hover": {
+          transform: "translateX(5px)",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+        },
       }}
     >
       {text}
@@ -90,7 +111,7 @@ const Home: React.FC = () => {
 
   return (
     <Box sx={{ display: "flex", height: "100vh", fontFamily: "'Montserrat', sans-serif" }}>
-      {/* Sidebar */}
+      {/* Sidebar izquierdo */}
       <Box
         sx={{
           width: 220,
@@ -98,19 +119,19 @@ const Home: React.FC = () => {
           p: 3,
           display: "flex",
           flexDirection: "column",
-          alignItems: "stretch",
+          gap: 2,
           boxShadow: "2px 0 5px rgba(0,0,0,0.1)",
         }}
       >
-        <SidebarButton text="Agregar Venta" onClick={handleAgregarVenta} />
-        <SidebarButton text="Caja Diaria/Mensual" onClick={handleCaja} color="#ff9800" />
+        <SidebarButton text="Agregar Venta" icon={<AddShoppingCartIcon />} onClick={handleAgregarVenta} />
+        <SidebarButton text="Caja Diaria/Mensual" icon={<ReceiptIcon />} onClick={handleCaja} color="warning" />
         {isAdmin && (
           <>
-            <SidebarButton text="Ver Notas" onClick={handleVerNotas} color="#9c27b0" />
-            <SidebarButton text="Agregar Stock" onClick={handleAgregarStock} color="#4caf50" />
-            <SidebarButton text="Administración de Ventas" onClick={handleAdminVentas} color="#f44336" />
-            <SidebarButton text="Control de Stock" onClick={handleControlStock} color="#03a9f4" />
-            <SidebarButton text="Agregar Reparación" onClick={handleAgregarReparacion} color="#9e9e9e" />
+            <SidebarButton text="Ver Notas" icon={<NotesIcon />} onClick={handleVerNotas} variant="outlined" color="secondary" />
+            <SidebarButton text="Agregar Stock" icon={<InventoryIcon />} onClick={handleAgregarStock} color="success" />
+            <SidebarButton text="Administración de Ventas" icon={<AdminPanelSettingsIcon />} onClick={handleAdminVentas} color="error" />
+            <SidebarButton text="Control de Stock" icon={<StoreIcon />} onClick={handleControlStock} color="info" />
+            <SidebarButton text="Agregar Reparación" icon={<BuildIcon />} onClick={handleAgregarReparacion} color="secondary" />
           </>
         )}
       </Box>
@@ -129,8 +150,8 @@ const Home: React.FC = () => {
           <Typography
             component="span"
             sx={{
-              fontSize: { xs: "10rem", sm: "12rem" },
-              fontWeight: 900,
+              fontSize: { xs: "12rem", sm: "14rem" },
+              fontWeight: "900",
               color: "#000",
               lineHeight: 1,
               transform: "translateY(-20%)",
@@ -141,8 +162,8 @@ const Home: React.FC = () => {
           <Typography
             component="span"
             sx={{
-              fontSize: { xs: "10rem", sm: "12rem" },
-              fontWeight: 900,
+              fontSize: { xs: "12rem", sm: "14rem" },
+              fontWeight: "900",
               color: "#000",
               lineHeight: 1,
               transform: "translateY(20%)",
@@ -153,12 +174,13 @@ const Home: React.FC = () => {
           <Typography
             variant="subtitle2"
             sx={{
-              fontWeight: 500,
+              fontWeight: "medium",
               color: "#555",
               mt: 2,
               textTransform: "uppercase",
               letterSpacing: 1,
               fontSize: "1.2rem",
+              userSelect: "none",
             }}
           >
             accesorios
