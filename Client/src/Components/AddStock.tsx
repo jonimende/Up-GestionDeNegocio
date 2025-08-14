@@ -412,6 +412,14 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
           >
             Agregar Accesorio
           </Button>
+           <Button
+            variant="outlined"
+            color="secondary"
+            sx={{ mt: 2 }}
+           onClick={() => navigate("/home")}
+          >
+            Volver al Home
+          </Button>
         </Box>
       ) : tipo === "celular" ? (
         <>
@@ -633,15 +641,6 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
               {loading ? "Guardando..." : "Guardar Accesorio"}
             </Button>
           </Box>
-
-          <Button
-            variant="outlined"
-            color="secondary"
-            sx={{ mt: 2 }}
-           onClick={() => navigate("/home")}
-          >
-            Volver al Home
-          </Button>
         </>
       )}
 
