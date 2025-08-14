@@ -418,7 +418,7 @@ return (
         )}
       </Box>
 
-      {/* 🔹 NUEVO BOTÓN: Volver al Home */}
+      {/* Botón: Volver al Home */}
       <Box textAlign="center" mt={3}>
         <Button variant="text" color="inherit" onClick={() => navigate("/home")}>
           ← Volver al Home
@@ -492,6 +492,7 @@ return (
             <Typography variant="h6" fontWeight="bold" gutterBottom>
               Movimientos recientes
             </Typography>
+
             {movimientos.length === 0 ? (
               <Typography>No hay movimientos registrados</Typography>
             ) : (
@@ -510,7 +511,12 @@ return (
                   {movimientos.map((mov) => (
                     <TableRow key={mov.id}>
                       <TableCell>{new Date(mov.fecha).toLocaleString()}</TableCell>
-                      <TableCell sx={{ color: mov.tipoMovimiento === "gasto" ? "red" : "orange", fontWeight: "bold" }}>
+                      <TableCell
+                        sx={{
+                          color: mov.tipoMovimiento === "gasto" ? "red" : "orange",
+                          fontWeight: "bold",
+                        }}
+                      >
                         {mov.tipoMovimiento.toUpperCase()}
                       </TableCell>
                       <TableCell>${mov.monto.toFixed(2)}</TableCell>
@@ -537,41 +543,47 @@ return (
               </Table>
             )}
           </Box>
+
+          {/* Confirmación de eliminación */}
+          <Dialog open={confirmOpen} onClose={handleCancelDelete}>
+            <DialogTitle>Confirmar eliminación</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                ¿Estás seguro que deseas eliminar este movimiento? Esta acción no se puede deshacer.
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCancelDelete} color="primary">
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmDelete}
+                color="error"
+                variant="contained"
+                autoFocus
+                disabled={eliminando}
+              >
+                {eliminando ? <CircularProgress size={20} /> : "Eliminar"}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Snackbar */}
+          <Snackbar
+            open={snackbar.open}
+            autoHideDuration={4000}
+            onClose={handleCloseSnackbar}
+            anchorOrigin={{ vertical: "top", horizontal: "center" }}
+          >
+            <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
+              {snackbar.message}
+            </Alert>
+          </Snackbar>
         </>
       )}
     </Paper>
-
-    {/* Confirmación de eliminación */}
-    <Dialog open={confirmOpen} onClose={handleCancelDelete}>
-      <DialogTitle>Confirmar eliminación</DialogTitle>
-      <DialogContent>
-        <DialogContentText>
-          ¿Estás seguro que deseas eliminar este movimiento? Esta acción no se puede deshacer.
-        </DialogContentText>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleCancelDelete} color="primary">
-          Cancelar
-        </Button>
-        <Button onClick={handleConfirmDelete} color="error" variant="contained" autoFocus>
-          Eliminar
-        </Button>
-      </DialogActions>
-    </Dialog>
-
-    {/* Snackbar */}
-    <Snackbar
-      open={snackbar.open}
-      autoHideDuration={4000}
-      onClose={handleCloseSnackbar}
-      anchorOrigin={{ vertical: "top", horizontal: "center" }}
-    >
-      <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
-        {snackbar.message}
-      </Alert>
-    </Snackbar>
   </>
-);
-
+ );
 };
-export default Caja;
+
+export default Caja; 

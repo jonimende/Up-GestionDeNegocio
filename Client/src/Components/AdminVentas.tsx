@@ -346,7 +346,7 @@ const AdminVentas: React.FC = () => {
     <Button
       variant="contained"
       color="secondary"
-      onClick={() => navigate("/home")} // O tu router
+      onClick={() => navigate("/home")}
       sx={{ textTransform: 'none' }}
     >
       Volver al Home
@@ -370,7 +370,7 @@ const AdminVentas: React.FC = () => {
     </Typography>
   )}
 
-  {/* Contenedor de tabla con scroll */}
+  {/* Contenedor de tabla */}
   <TableContainer
     component={Paper}
     sx={{
@@ -604,7 +604,7 @@ const AdminVentas: React.FC = () => {
                       variant="outlined"
                       color="error"
                       size="small"
-                      onClick={() => handleOpenDialog(venta.id)}
+                      onClick={() => handleDelete(venta.id)}
                       sx={{ textTransform: 'none' }}
                     >
                       Eliminar
@@ -654,7 +654,7 @@ const AdminVentas: React.FC = () => {
                       variant="outlined"
                       color="error"
                       size="small"
-                      onClick={() => handleOpenDialog(venta.id)}
+                      onClick={() => handleDelete(venta.id)}
                       sx={{ textTransform: 'none' }}
                     >
                       Eliminar
@@ -668,25 +668,8 @@ const AdminVentas: React.FC = () => {
       </TableBody>
     </Table>
   </TableContainer>
-
-  {/* Dialog de confirmación */}
-  <Dialog open={openDialog} onClose={handleCancelDelete}>
-    <DialogTitle>Confirmar Eliminación</DialogTitle>
-    <DialogContent>
-      <Typography>
-        ¿Estás seguro que deseas eliminar esta venta? Esta acción no se puede deshacer.
-      </Typography>
-    </DialogContent>
-    <DialogActions>
-      <Button onClick={handleCancelDelete} color="primary">
-        Cancelar
-      </Button>
-      <Button onClick={handleConfirmDelete} color="error" variant="contained">
-        Eliminar
-      </Button>
-    </DialogActions>
-  </Dialog>
 </Box>
+
 
 };
 // 👇 Estilo aplicado a cada celda
