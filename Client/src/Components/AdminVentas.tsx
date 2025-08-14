@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Collapse,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
@@ -102,6 +103,7 @@ const AdminVentas: React.FC = () => {
   const [filtro, setFiltro] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
   const [ventaAEliminar, setVentaAEliminar] = useState<number | null>(null);
+  const [expandedVentaId, setExpandedVentaId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -342,344 +344,289 @@ const AdminVentas: React.FC = () => {
   if (loading) return <Typography sx={{ p: 2 }}>Cargando...</Typography>;
 
   return (
-    <Box sx={{ p: 2 }}> 
-    <Typography variant="h4" mb={2} fontWeight="bold"> Administración de Ventas </Typography> 
-    <Box mb={2}> 
-      <Button variant="contained" color="secondary" onClick={() => navigate("/home")} sx={{ textTransform: "none" }} 
-        > Volver al Inicio 
-        </Button> 
-    </Box> 
-    <TextField label="Buscar por comprador, fecha, IMEI, modelo, método pago..." 
-    variant="outlined" fullWidth margin="normal" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
-       {errorValidacion && ( <Typography color="error" mb={2}> {errorValidacion} </Typography> )}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={cellStyle}>Fecha</TableCell>
-              <TableCell sx={cellStyle}>Cantidad</TableCell>
-              <TableCell sx={cellStyle}>Total</TableCell>
-              <TableCell sx={cellStyle}>Método de pago</TableCell>
-              <TableCell sx={cellStyle}>Comprador</TableCell>
-              <TableCell sx={cellStyle}>Producto</TableCell>
-              <TableCell sx={cellStyle}>Proveedor</TableCell>
-              <TableCell sx={cellStyle}>Modelo</TableCell>
-              <TableCell sx={cellStyle}>Almacenamiento</TableCell>
-              <TableCell sx={cellStyle}>Batería</TableCell>
-              <TableCell sx={cellStyle}>Color</TableCell>
-              <TableCell sx={cellStyle}>Precio</TableCell>
-              <TableCell sx={cellStyle}>Observaciones</TableCell>
-              <TableCell sx={cellStyle}>IMEI</TableCell>
-              <TableCell sx={cellStyle}>Fecha Ingreso</TableCell>
-              <TableCell sx={cellStyle}>Accesorio</TableCell>
-              <TableCell sx={cellStyle}>Descripción Reparación</TableCell>
-              <TableCell sx={cellStyle}>Reparado Por</TableCell>
-              <TableCell sx={cellStyle}>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {ventasFiltradas.map((venta) => {
-              const isEditing = editandoId === venta.id;
-              return (
-                <TableRow key={venta.id}>
-                  {isEditing ? (
-                    <>
-                      {/* Fecha */}
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="fecha"
-                          type="date"
-                          size="small"
-                          value={form.fecha || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
+  <Box sx={{ p: 2 }}>
+    <Typography variant="h4" mb={2} fontWeight="bold">
+      Administración de Ventas
+    </Typography>
 
-                      {/* Cantidad */}
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="cantidad"
-                          type="number"
-                          size="small"
-                          value={form.cantidad ?? ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-
-                      {/* Total */}
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="total"
-                          type="number"
-                          size="small"
-                          value={form.total ?? ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-
-                      {/* Método de pago */}
-                      <TableCell sx={cellStyle}>
-                        <Select
-                          name="metodoPago"
-                          size="small"
-                          value={form.metodoPago || ""}
-                          onChange={handleInputChange}
-                          displayEmpty
-                        >
-                          <MenuItem value="">
-                            <em>Seleccionar</em>
-                          </MenuItem>
-                          {METODOS_PAGO.map((m) => (
-                            <MenuItem key={m} value={m}>
-                              {m}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </TableCell>
-
-                      {/* Comprador */}
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="comprador"
-                          size="small"
-                          value={form.comprador || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-
-                      {/* Producto */}
-                      <TableCell sx={cellStyle}>{getProducto(venta)}</TableCell>
-
-                      {/* Proveedor */}
-                      <TableCell sx={cellStyle}>
-                        <Select
-                          name="proveedorId"
-                          size="small"
-                          value={form.proveedorId ?? ""}
-                          onChange={handleInputChange}
-                          displayEmpty
-                        >
-                          <MenuItem value="">
-                            <em>Seleccionar</em>
-                          </MenuItem>
-                          {proveedores.map((p) => (
-                            <MenuItem key={p.id} value={p.id}>
-                              {p.nombre}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </TableCell>
-
-                      {/* Campos Celular */}
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="modelo"
-                          size="small"
-                          value={form.modelo || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="almacenamiento"
-                          size="small"
-                          value={form.almacenamiento || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="bateria"
-                          size="small"
-                          value={form.bateria || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="color"
-                          size="small"
-                          value={form.color || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="precio"
-                          type="number"
-                          size="small"
-                          value={form.precio ?? ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="observaciones"
-                          size="small"
-                          value={form.observaciones || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="imei"
-                          size="small"
-                          value={form.imei || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="fechaIngreso"
-                          type="date"
-                          size="small"
-                          value={form.fechaIngreso || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-
-                      {/* Campos Accesorio */}
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="accesorios"
-                          size="small"
-                          value={form.accesorios || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-
-                      {/* Campos Reparación */}
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="reparacionDescripcion"
-                          size="small"
-                          value={form.reparacionDescripcion || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        <TextField
-                          name="reparadoPor"
-                          size="small"
-                          value={form.reparadoPor || ""}
-                          onChange={handleInputChange}
-                        />
-                      </TableCell>
-
-                      {/* Acciones */}
-                      <TableCell sx={cellStyle}>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          size="small"
-                          onClick={handleSave}
-                          sx={{ mr: 1, textTransform: "none" }}
-                        >
-                          Guardar
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          size="small"
-                          onClick={() => handleOpenDialog(venta.id)}
-                          sx={{ textTransform: "none" }}
-                        >
-                          Eliminar
-                        </Button>
-                      </TableCell>
-                    </>
-                  ) : (
-                    <>
-                      <TableCell sx={cellStyle}>
-                        {new Date(venta.fecha).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>{venta.cantidad}</TableCell>
-                      <TableCell sx={cellStyle}>${venta.total}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.metodoPago}</TableCell>
-                      <TableCell sx={cellStyle}>{venta.comprador}</TableCell>
-                      <TableCell sx={cellStyle}>{getProducto(venta)}</TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Proveedor?.nombre || "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Celular?.modelo || "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Celular?.almacenamiento || "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Celular?.bateria || "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Celular?.color || "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Celular?.precio ?? "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Celular?.observaciones || "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Celular?.imei || "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Celular?.fechaIngreso
-                          ? new Date(venta.Celular.fechaIngreso).toLocaleDateString()
-                          : "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Accesorio?.nombre || "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Reparacion?.descripcion || "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        {venta.Reparacion?.reparadoPor || "-"}
-                      </TableCell>
-                      <TableCell sx={cellStyle}>
-                        <Button
-                          variant="contained"
-                          color="secondary"
-                          size="small"
-                          onClick={() => handleEditClick(venta)}
-                          sx={{ mr: 1, textTransform: "none" }}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          size="small"
-                          onClick={() => handleOpenDialog(venta.id)}
-                          sx={{ textTransform: "none" }}
-                        >
-                          Eliminar
-                        </Button>
-                      </TableCell>
-                    </>
-                  )}
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Dialog open={openDialog} onClose={handleCancelDelete}>
-        <DialogTitle>Confirmar eliminación</DialogTitle>
-        <DialogContent>
-          <Typography>¿Estás seguro que deseas eliminar esta venta?</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelDelete} color="primary">
-            Cancelar
-          </Button>
-          <Button onClick={handleConfirmDelete} color="error" variant="contained">
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
+    <Box mb={2}>
+      <Button
+        variant="contained"
+        color="secondary"
+        onClick={() => navigate("/home")}
+        sx={{ textTransform: "none" }}
+      >
+        Volver al Inicio
+      </Button>
     </Box>
-  );
+
+    <TextField
+      label="Buscar por comprador, fecha, IMEI, modelo, método pago..."
+      variant="outlined"
+      fullWidth
+      margin="normal"
+      value={filtro}
+      onChange={(e) => setFiltro(e.target.value)}
+    />
+
+    {errorValidacion && (
+      <Typography color="error" mb={2}>
+        {errorValidacion}
+      </Typography>
+    )}
+
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={cellStyle}>Fecha</TableCell>
+            <TableCell sx={cellStyle}>Comprador</TableCell>
+            <TableCell sx={cellStyle}>Total</TableCell>
+            <TableCell sx={cellStyle}>Acciones</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {ventasFiltradas.map((venta) => {
+            const isEditing = editandoId === venta.id;
+            const isExpanded = expandedVentaId === venta.id;
+
+            return (
+              <React.Fragment key={venta.id}>
+                {/* Fila principal */}
+                <TableRow
+                  hover
+                  sx={{ cursor: "pointer" }}
+                  onClick={() => setExpandedVentaId(isExpanded ? null : venta.id)}
+                >
+                  <TableCell>{new Date(venta.fecha).toLocaleDateString()}</TableCell>
+                  <TableCell>{venta.comprador}</TableCell>
+                  <TableCell>${venta.total}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(venta);
+                      }}
+                      sx={{ mr: 1, textTransform: "none" }}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenDialog(venta.id);
+                      }}
+                      sx={{ textTransform: "none" }}
+                    >
+                      Eliminar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+
+                {/* Fila expandible */}
+                <TableRow>
+                  <TableCell colSpan={4} sx={{ p: 0, borderBottom: "unset" }}>
+                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                      <Box sx={{ m: 2 }}>
+                        {isEditing ? (
+                          // FORMULARIO DE EDICIÓN COMPLETO
+                          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
+                            <TextField
+                              name="fecha"
+                              type="date"
+                              size="small"
+                              value={form.fecha || ""}
+                              onChange={handleInputChange}
+                              label="Fecha"
+                            />
+                            <TextField
+                              name="cantidad"
+                              type="number"
+                              size="small"
+                              value={form.cantidad ?? ""}
+                              onChange={handleInputChange}
+                              label="Cantidad"
+                            />
+                            <TextField
+                              name="total"
+                              type="number"
+                              size="small"
+                              value={form.total ?? ""}
+                              onChange={handleInputChange}
+                              label="Total"
+                            />
+                            <Select
+                              name="metodoPago"
+                              size="small"
+                              value={form.metodoPago || ""}
+                              onChange={handleInputChange}
+                              displayEmpty
+                            >
+                              <MenuItem value="">
+                                <em>Seleccionar método</em>
+                              </MenuItem>
+                              {METODOS_PAGO.map((m) => (
+                                <MenuItem key={m} value={m}>{m}</MenuItem>
+                              ))}
+                            </Select>
+                            <TextField
+                              name="comprador"
+                              size="small"
+                              value={form.comprador || ""}
+                              onChange={handleInputChange}
+                              label="Comprador"
+                            />
+                            <TextField
+                              name="modelo"
+                              size="small"
+                              value={form.modelo || ""}
+                              onChange={handleInputChange}
+                              label="Modelo"
+                            />
+                            <TextField
+                              name="almacenamiento"
+                              size="small"
+                              value={form.almacenamiento || ""}
+                              onChange={handleInputChange}
+                              label="Almacenamiento"
+                            />
+                            <TextField
+                              name="bateria"
+                              size="small"
+                              value={form.bateria || ""}
+                              onChange={handleInputChange}
+                              label="Batería"
+                            />
+                            <TextField
+                              name="color"
+                              size="small"
+                              value={form.color || ""}
+                              onChange={handleInputChange}
+                              label="Color"
+                            />
+                            <TextField
+                              name="precio"
+                              type="number"
+                              size="small"
+                              value={form.precio ?? ""}
+                              onChange={handleInputChange}
+                              label="Precio"
+                            />
+                            <TextField
+                              name="observaciones"
+                              size="small"
+                              value={form.observaciones || ""}
+                              onChange={handleInputChange}
+                              label="Observaciones"
+                            />
+                            <TextField
+                              name="imei"
+                              size="small"
+                              value={form.imei || ""}
+                              onChange={handleInputChange}
+                              label="IMEI"
+                            />
+                            <TextField
+                              name="fechaIngreso"
+                              type="date"
+                              size="small"
+                              value={form.fechaIngreso || ""}
+                              onChange={handleInputChange}
+                              label="Fecha Ingreso"
+                            />
+                            <TextField
+                              name="accesorios"
+                              size="small"
+                              value={form.accesorios || ""}
+                              onChange={handleInputChange}
+                              label="Accesorio"
+                            />
+                            <TextField
+                              name="reparacionDescripcion"
+                              size="small"
+                              value={form.reparacionDescripcion || ""}
+                              onChange={handleInputChange}
+                              label="Descripción Reparación"
+                            />
+                            <TextField
+                              name="reparadoPor"
+                              size="small"
+                              value={form.reparadoPor || ""}
+                              onChange={handleInputChange}
+                              label="Reparado Por"
+                            />
+                            <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                              <Button
+                                variant="contained"
+                                color="primary"
+                                size="small"
+                                onClick={handleSave}
+                                sx={{ textTransform: "none" }}
+                              >
+                                Guardar
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                onClick={() => handleOpenDialog(venta.id)}
+                                sx={{ textTransform: "none" }}
+                              >
+                                Eliminar
+                              </Button>
+                            </Box>
+                          </Box>
+                        ) : (
+                          // DETALLES EXPANDIBLES
+                          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
+                            <Typography>Producto: {getProducto(venta)}</Typography>
+                            <Typography>Proveedor: {venta.Proveedor?.nombre || "-"}</Typography>
+                            <Typography>Modelo: {venta.Celular?.modelo || "-"}</Typography>
+                            <Typography>Almacenamiento: {venta.Celular?.almacenamiento || "-"}</Typography>
+                            <Typography>Batería: {venta.Celular?.bateria || "-"}</Typography>
+                            <Typography>Color: {venta.Celular?.color || "-"}</Typography>
+                            <Typography>Precio: {venta.Celular?.precio ?? "-"}</Typography>
+                            <Typography>Observaciones: {venta.Celular?.observaciones || "-"}</Typography>
+                            <Typography>IMEI: {venta.Celular?.imei || "-"}</Typography>
+                            <Typography>Fecha Ingreso: {venta.Celular?.fechaIngreso ? new Date(venta.Celular.fechaIngreso).toLocaleDateString() : "-"}</Typography>
+                            <Typography>Accesorio: {venta.Accesorio?.nombre || "-"}</Typography>
+                            <Typography>Descripción Reparación: {venta.Reparacion?.descripcion || "-"}</Typography>
+                            <Typography>Reparado Por: {venta.Reparacion?.reparadoPor || "-"}</Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Collapse>
+                  </TableCell>
+                </TableRow>
+              </React.Fragment>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TableContainer>
+
+    <Dialog open={openDialog} onClose={handleCancelDelete}>
+      <DialogTitle>Confirmar eliminación</DialogTitle>
+      <DialogContent>
+        <Typography>¿Estás seguro que deseas eliminar esta venta?</Typography>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleCancelDelete} color="primary">
+          Cancelar
+        </Button>
+        <Button onClick={handleConfirmDelete} color="error" variant="contained">
+          Eliminar
+        </Button>
+      </DialogActions>
+    </Dialog>
+  </Box>
+);
 };
 
 export default AdminVentas;
