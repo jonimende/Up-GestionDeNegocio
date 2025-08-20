@@ -12,8 +12,6 @@ import accesorios from './Routes/AccRoutes';
 import notaRoutes from './Routes/NotasRoutes';
 import proveedoresRoutes from './Routes/ProovedoresRoutes';
 import MovimientoCaja from './Routes/movimientosCajaRoutes';
-import { Usuario } from './Models/Usuario';
-import bcrypt from 'bcrypt';
 
 const app = express();
 app.use(cors({

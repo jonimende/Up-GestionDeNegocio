@@ -423,7 +423,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
             onClick={() => navigate("/home")}
             sx={{ mt: 1, minWidth: 150 }}
           >
-            Volver al Home
+            Volver al Inicio
           </Button>
         </Box>
       ) : tipo === "celular" ? (

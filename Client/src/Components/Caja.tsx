@@ -398,13 +398,14 @@ return (
             <Typography variant="subtitle1" sx={{ mt: 1 }}>
               Ventas realizadas: {cantidad}
             </Typography>
-
+            
             <Typography variant="h6" sx={{ mt: 2 }}>
               Balance actual: <strong>${balance.toFixed(2)}</strong> USD
             </Typography>
           </>
         )}
       </Box>
+
 
       {/* Botones principales */}
       <Box display="flex" justifyContent="center" gap={2} mt={3} flexWrap="wrap">

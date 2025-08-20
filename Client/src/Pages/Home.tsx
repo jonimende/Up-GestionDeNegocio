@@ -59,6 +59,7 @@ const Home: React.FC = () => {
   const handleControlStock = () => navigate("/control-stock");
   const handleCaja = () => navigate("/ventas/caja");
   const handleAgregarReparacion = () => navigate("/admin/reparaciones");
+  const handleProveedores = () => navigate("/admin/proveedores"); // 🔹 Nuevo handler
 
   // Botón del sidebar
   const SidebarButton = ({
@@ -111,6 +112,7 @@ const Home: React.FC = () => {
             <SidebarButton text="Administración de Ventas" onClick={handleAdminVentas} color="#f44336" />
             <SidebarButton text="Control de Stock" onClick={handleControlStock} color="#03a9f4" />
             <SidebarButton text="Agregar Reparación" onClick={handleAgregarReparacion} color="#9e9e9e" />
+            <SidebarButton text="Administrar Proveedores" onClick={handleProveedores} color="#795548" /> {/* 🔹 Nuevo botón */}
           </>
         )}
       </Box>

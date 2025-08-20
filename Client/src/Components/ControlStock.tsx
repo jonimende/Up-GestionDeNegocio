@@ -248,7 +248,7 @@ const ControlDeStock: React.FC = () => {
           color="primary"
           onClick={() => navigate("/home")} // Asegúrate de tener `useNavigate`
         >
-          Volver al Home
+          Volver al Inicio
         </Button>
       </Box>
 
