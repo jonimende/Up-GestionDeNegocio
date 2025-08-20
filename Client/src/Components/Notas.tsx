@@ -77,7 +77,7 @@ const Notas = () => {
         color="primary"
         onClick={() => navigate("/home")} // asegurate de tener `const navigate = useNavigate();`
       >
-        Volver al Home
+        Volver al Inicio
       </Button>
     </Box>
 

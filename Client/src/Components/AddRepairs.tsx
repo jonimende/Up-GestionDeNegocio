@@ -179,7 +179,7 @@ const AddReparacion: React.FC = () => {
         </Button>
 
         <Button variant="outlined" color="secondary" onClick={() => navigate("/home")}>
-          Volver al Home
+          Volver al Inicio
         </Button>
       </Box>
     </Paper>

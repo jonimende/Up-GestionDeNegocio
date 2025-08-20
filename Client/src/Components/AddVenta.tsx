@@ -608,7 +608,7 @@ const AddVenta: React.FC = () => {
           sx={{ mt: 2 }}
           onClick={() => navigate("/home")}
         >
-          Volver al Home
+          Volver al Inicio
         </Button>
         </Box>
       </Paper>

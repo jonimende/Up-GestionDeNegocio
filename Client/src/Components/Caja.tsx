@@ -363,7 +363,7 @@ const Caja: React.FC = () => {
         </Box>
 
         <Box textAlign="center" mt={3}>
-          <Button variant="text" onClick={() => navigate("/home")}>← Volver al Home</Button>
+          <Button variant="text" onClick={() => navigate("/home")}>← Volver al Inicio</Button>
         </Box>
 
         {isAdmin && (
