@@ -38,6 +38,8 @@ export class Venta extends Model<VentaAttributes, VentaCreationAttributes> imple
 
   public ganancia!: number | null;
   public idProveedor!: number | null;
+
+  public accesorios?: (Accesorios & { VentaAccesorio: { cantidad: number } })[];
 }
 
 Venta.init({
