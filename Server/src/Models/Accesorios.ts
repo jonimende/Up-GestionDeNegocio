@@ -4,7 +4,7 @@ import { sequelize } from "../db";
 export class Accesorios extends Model {
   public id!: number;
   public nombre!: string;
-  public stock!: number | null;
+  public stock!: number;
   public precio!: number;
   public vendido!: boolean;
 }

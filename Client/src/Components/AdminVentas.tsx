@@ -50,9 +50,14 @@ interface Venta {
     fechaIngreso?: string;
     idProveedor?: number | null;
   };
-  Accesorio?: {
-    nombre?: string;
-  };
+  
+  accesorios?: {
+    id: number;
+    nombre: string;
+    precio?: number;
+    VentaAccesorio?: { cantidad: number };
+  }[];
+
   Reparacion?: {
     descripcion?: string;
     reparadoPor?: string;
@@ -72,7 +77,7 @@ interface VentaForm extends Venta {
   observaciones?: string;
   imei?: string;
   fechaIngreso?: string;
-  accesorios?: string;
+  accesoriosA?: string;
   reparacionDescripcion?: string;
   reparadoPor?: string;
   proveedorId?: number | null;
@@ -190,7 +195,7 @@ const AdminVentas: React.FC = () => {
       const modelo = v.Celular?.modelo?.toLowerCase() ?? "";
       const metodoPago = v.metodoPago?.toLowerCase() ?? "";
       const proveedorNombre = v.Proveedor?.nombre?.toLowerCase() ?? "";
-      const accesorios = v.Accesorio?.nombre?.toLowerCase() ?? "";
+      const accesorios = v.accesorios?.map(a => a.nombre.toLowerCase()).join(", ") ?? "";
       const reparacionDesc = v.Reparacion?.descripcion?.toLowerCase() ?? "";
 
       return (
@@ -225,7 +230,7 @@ const AdminVentas: React.FC = () => {
         ? venta.Celular.fechaIngreso.slice(0, 10)
         : "",
 
-      accesorios: venta.Accesorio?.nombre ?? "",
+      accesoriosA: venta.accesorios?.map(a => a.nombre).join(", ") ?? "",
 
       reparacionDescripcion: venta.Reparacion?.descripcion ?? "",
       reparadoPor: venta.Reparacion?.reparadoPor ?? "",
@@ -597,7 +602,10 @@ const AdminVentas: React.FC = () => {
                             <Typography>Observaciones: {venta.Celular?.observaciones || "-"}</Typography>
                             <Typography>IMEI: {venta.Celular?.imei || "-"}</Typography>
                             <Typography>Fecha Ingreso: {venta.Celular?.fechaIngreso ? new Date(venta.Celular.fechaIngreso).toLocaleDateString() : "-"}</Typography>
-                            <Typography>Accesorio: {venta.Accesorio?.nombre || "-"}</Typography>
+                            <Typography>Accesorios: {venta.accesorios && venta.accesorios.length > 0 
+                                ? venta.accesorios.map(a => `${a.nombre} x${(a as any).VentaAccesorio.cantidad}`).join(", ") 
+                                : "-"}
+                            </Typography>
                             <Typography>Descripción Reparación: {venta.Reparacion?.descripcion || "-"}</Typography>
                             <Typography>Reparado Por: {venta.Reparacion?.reparadoPor || "-"}</Typography>
                           </Box>

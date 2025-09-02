@@ -54,6 +54,9 @@ interface CurrencyResponse {
     ARS: {
       value: number;
     };
+    USD: {
+      value: number;
+    };
   };
 }
 
@@ -199,12 +202,12 @@ const Caja = () => {
         {
           params: {
             apikey: process.env.REACT_APP_CURRENCY_API_KEY,
-            base_currency: "USD",
-            currencies: "ARS",
+            base_currency: "ARS",
+            currencies: "USD",
           },
         }
       );
-      const tasa = response.data.data.ARS.value;
+      const tasa = response.data.data.USD.value;
       setTasaCambio(tasa);
       const resultado = totalNeto * tasa;
       setTotalEnPesos(resultado);
@@ -366,7 +369,7 @@ return (
       {/* Totales */}
       <Box mt={4} textAlign="center">
         <Typography variant="h6">
-          Total generado (USD): <strong>${total.toFixed(2)}</strong>
+          Total generado (ARS): <strong>${total.toFixed(2)}</strong>
         </Typography>
 
         {isAdmin && (
@@ -379,13 +382,13 @@ return (
             </Typography>
 
             <Typography variant="h6" sx={{ mt: 2 }}>
-              Total neto (USD): <strong>${totalNeto.toFixed(2)}</strong>
+              Total neto (ARS): <strong>${totalNeto.toFixed(2)}</strong>
             </Typography>
 
             {totalEnPesos !== null && tasaCambio !== null && (
               <Typography variant="body1" sx={{ color: "green", mt: 1 }}>
-                Total en pesos (ARS): <strong>${totalEnPesos.toFixed(2)}</strong> <br />
-                <small>Tasa usada: {tasaCambio.toFixed(4)} ARS / USD</small>
+                Total en USD: <strong>${totalEnPesos.toFixed(2)}</strong> <br />
+                <small>Tasa usada: {tasaCambio.toFixed(4)} USD / ARS</small>
               </Typography>
             )}
 
@@ -400,7 +403,7 @@ return (
             </Typography>
             
             <Typography variant="h6" sx={{ mt: 2 }}>
-              Balance actual: <strong>${balance.toFixed(2)}</strong> USD
+              Balance actual: <strong>${balance.toFixed(2)}</strong> ARS
             </Typography>
           </>
         )}
@@ -421,8 +424,8 @@ return (
 
       {/* Botón: Volver al Home */}
       <Box textAlign="center" mt={3}>
-        <Button variant="text" color="inherit" onClick={() => navigate("/home")}>
-          ← Volver al Home
+        <Button variant="outlined" fullWidth color="secondary" sx={{ mt: 2 }} onClick={() => navigate("/home")}>
+          ← Volver al Inicio
         </Button>
       </Box>
 

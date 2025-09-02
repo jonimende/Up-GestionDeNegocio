@@ -21,7 +21,7 @@ export class Celular extends Model {
   public fechaIngreso!: Date;
   public fechaVenta!: Date | null;
   public comprador!: string | null;
-  public stock!: number | null;
+  public stock!: number;
   public vendido!: boolean;
 }
 

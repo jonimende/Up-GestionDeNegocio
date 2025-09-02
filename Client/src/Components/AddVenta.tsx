@@ -75,7 +75,8 @@ const AddVenta: React.FC = () => {
     fechaIngreso: null,
   });
 
-  const [selectedAccesorio, setSelectedAccesorio] = useState<number | ''>('');
+  // NUEVO: Soporte para múltiples accesorios
+  const [selectedAccesorios, setSelectedAccesorios] = useState<{ id: number; cantidad: number }[]>([]);
   const [selectedReparacion, setSelectedReparacion] = useState<number | ''>('');
   const [cantidad, setCantidad] = useState<number>(1);
   const [total, setTotal] = useState<number | ''>('');
@@ -125,17 +126,7 @@ const AddVenta: React.FC = () => {
           const decoded = jwtDecode<{ admin: boolean }>(token);
           if (decoded.admin) setIsAdmin(true);
         }
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        const [celRes, accRes, repRes, provRes] = await Promise.all([
-          axios.get<Celular[]>('https://up-gestiondenegocio-production.up.railway.app/celulares/disponibles', config),
-          axios.get<Item[]>('https://up-gestiondenegocio-production.up.railway.app/accesorios/disponibles', config),
-          axios.get<Reparacion[]>('https://up-gestiondenegocio-production.up.railway.app/reparaciones', config),
-          axios.get<Proveedor[]>('https://up-gestiondenegocio-production.up.railway.app/proveedores', config),
-        ]);
-        setCelulares(celRes.data);
-        setAccesorios(accRes.data);
-        setReparaciones(repRes.data);
-        setProveedores(provRes.data);
+        await refetchLists();
       } catch {
         setError('Error al cargar datos');
       }
@@ -159,14 +150,9 @@ const AddVenta: React.FC = () => {
       });
       setFechaIngreso(value.fechaIngreso ? value.fechaIngreso.substring(0, 10) : '');
       setFechaVenta(new Date().toISOString().substring(0, 10));
-      if (isAdmin) {
-        setImei(value.imei || '');
-      } else {
-        setImei('');
-      }
+      setImei(isAdmin ? value.imei || '' : '');
       setTotal(value.precio * cantidad);
 
-      // Actualizamos el proveedorNombre cuando seleccionamos un celular
       if (value.proveedorId) {
         const prov = proveedores.find(p => p.id === value.proveedorId);
         setProveedorNombre(prov ? prov.nombre : '');
@@ -194,7 +180,6 @@ const AddVenta: React.FC = () => {
     }
   };
 
-  // Manejo selección / ingreso proveedor
   const handleProveedorSelect = (value: Proveedor | null) => {
     if (value) {
       setCelularData({ ...celularData, proveedorId: value.id });
@@ -205,6 +190,7 @@ const AddVenta: React.FC = () => {
     }
   };
 
+  // Calcular total cada vez que cambian celular, accesorios o cantidad
   useEffect(() => {
     let precioCelular = 0;
     if (selectedCelularId !== '') {
@@ -212,15 +198,14 @@ const AddVenta: React.FC = () => {
       if (celular) precioCelular = celular.precio;
     }
 
-    let precioAccesorio = 0;
-    if (selectedAccesorio !== '') {
-      const accesorio = accesorios.find(a => a.id === selectedAccesorio);
-      if (accesorio && accesorio.precio) precioAccesorio = accesorio.precio;
-    }
+    let precioAccesorios = selectedAccesorios.reduce((sum, sa) => {
+      const acc = accesorios.find(a => a.id === sa.id);
+      return sum + (acc?.precio || 0) * sa.cantidad;
+    }, 0);
 
-    const nuevoTotal = (precioCelular + precioAccesorio) * cantidad;
+    const nuevoTotal = (precioCelular + precioAccesorios) * cantidad;
     setTotal(nuevoTotal);
-  }, [cantidad, selectedCelularId, selectedAccesorio, celulares, accesorios]);
+  }, [cantidad, selectedCelularId, selectedAccesorios, celulares, accesorios]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,11 +214,7 @@ const AddVenta: React.FC = () => {
 
     if (!cantidad || cantidad < 1) return setError('Cantidad inválida');
     if (!total || total <= 0) return setError('Total inválido');
-    if (
-      selectedCelularId === '' &&
-      selectedAccesorio === '' &&
-      selectedReparacion === ''
-    )
+    if (selectedCelularId === '' && selectedAccesorios.length === 0 && selectedReparacion === '')
       return setError('Seleccione al menos un producto');
     if (selectedCelularId !== '' && !celularData.modelo)
       return setError('Complete los datos del celular');
@@ -248,7 +229,7 @@ const AddVenta: React.FC = () => {
         cantidad,
         total,
         celularId: selectedCelularId !== '' ? selectedCelularId : null,
-        accesorioId: selectedAccesorio !== '' ? selectedAccesorio : null,
+        accesorios: selectedAccesorios.length > 0 ? selectedAccesorios : undefined,
         reparacionId: selectedReparacion !== '' ? selectedReparacion : null,
         metodoPago,
         comprador: comprador.trim(),
@@ -268,10 +249,11 @@ const AddVenta: React.FC = () => {
       await refetchLists();
 
       setSuccess('Venta agregada correctamente');
+      // RESET
       setCantidad(1);
       setTotal('');
       setSelectedCelularId('');
-      setSelectedAccesorio('');
+      setSelectedAccesorios([]);
       setSelectedReparacion('');
       setCelularData({
         modelo: '',
@@ -311,17 +293,7 @@ const AddVenta: React.FC = () => {
   return (
     <Container maxWidth="md" sx={{ mt: 6 }}>
       <Paper sx={{ p: 4 }}>
-        <Typography
-          variant="h4"
-          align="center"
-          gutterBottom
-          sx={{
-            fontWeight: '700',
-            fontFamily: "'Roboto Slab', serif",
-            color: '#3f51b5',
-            mb: 4,
-          }}
-        >
+        <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: '700', fontFamily: "'Roboto Slab', serif", color: '#3f51b5', mb: 4 }}>
           Agregar Venta
         </Typography>
 
@@ -340,85 +312,25 @@ const AddVenta: React.FC = () => {
             disabled={loading}
           />
 
-          <Box
-            sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 2,
-              mb: 2,
-              ...(isAdmin && { justifyContent: 'space-between' }),
-            }}
-          >
-            <TextField
-              label="Modelo"
-              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
-              value={celularData.modelo}
-              onChange={(e) => setCelularData({ ...celularData, modelo: e.target.value })}
-              disabled={loading}
-            />
-            <TextField
-              label="Almacenamiento"
-              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
-              value={celularData.almacenamiento}
-              onChange={(e) => setCelularData({ ...celularData, almacenamiento: e.target.value })}
-              disabled={loading}
-            />
-            <TextField
-              label="Batería"
-              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
-              value={celularData.bateria}
-              onChange={(e) => setCelularData({ ...celularData, bateria: e.target.value })}
-              disabled={loading}
-            />
-            <TextField
-              label="Color"
-              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
-              value={celularData.color}
-              onChange={(e) => setCelularData({ ...celularData, color: e.target.value })}
-              disabled={loading}
-            />
-            <TextField
-              label="Precio"
-              type="number"
-              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
-              value={celularData.precio}
-              onChange={(e) => setCelularData({ ...celularData, precio: Number(e.target.value) })}
-              disabled={loading}
-            />
-            <TextField
-              label="Observaciones"
-              multiline
-              rows={2}
-              sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }}
-              value={celularData.observaciones}
-              onChange={(e) => setCelularData({ ...celularData, observaciones: e.target.value })}
-              disabled={loading}
-            />
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2, ...(isAdmin && { justifyContent: 'space-between' }) }}>
+            <TextField label="Modelo" sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }} value={celularData.modelo} onChange={(e) => setCelularData({ ...celularData, modelo: e.target.value })} disabled={loading} />
+            <TextField label="Almacenamiento" sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }} value={celularData.almacenamiento} onChange={(e) => setCelularData({ ...celularData, almacenamiento: e.target.value })} disabled={loading} />
+            <TextField label="Batería" sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }} value={celularData.bateria} onChange={(e) => setCelularData({ ...celularData, bateria: e.target.value })} disabled={loading} />
+            <TextField label="Color" sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }} value={celularData.color} onChange={(e) => setCelularData({ ...celularData, color: e.target.value })} disabled={loading} />
+            <TextField label="Precio" type="number" sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }} value={celularData.precio} onChange={(e) => setCelularData({ ...celularData, precio: Number(e.target.value) })} disabled={loading} />
+            <TextField label="Observaciones" multiline rows={2} sx={{ flex: isAdmin ? '0 0 48%' : '1 1 100%' }} value={celularData.observaciones} onChange={(e) => setCelularData({ ...celularData, observaciones: e.target.value })} disabled={loading} />
           </Box>
 
           {/* Proveedor editable */}
           <Autocomplete
             options={proveedores}
-            getOptionLabel={(option) => {
-              // option puede ser string o Proveedor
-              if (typeof option === 'string') {
-                return option; // texto libre
-              }
-              return option.nombre; // objeto proveedor
-            }}
-            value={
-              // value puede ser string | Proveedor | null
-              typeof proveedorNombre === 'string'
-                ? null
-                : proveedorNombre
-            }
+            getOptionLabel={(option) => typeof option === 'string' ? option : option.nombre}
+            value={typeof proveedorNombre === 'string' ? null : proveedorNombre}
             onChange={(_, value) => {
               if (typeof value === 'string') {
-                // texto libre ingresado manualmente
                 setProveedorNombre(value);
                 setCelularData({ ...celularData, proveedorId: null });
               } else if (value && typeof value === 'object') {
-                // valor seleccionado del listado
                 setProveedorNombre(value.nombre);
                 setCelularData({ ...celularData, proveedorId: value.id });
               } else {
@@ -428,22 +340,46 @@ const AddVenta: React.FC = () => {
             }}
             inputValue={proveedorNombre}
             onInputChange={(_, newInputValue) => setProveedorNombre(newInputValue)}
-            renderInput={(params) => (
-              <TextField {...params} label="Proveedor" sx={{ mb: 2 }} />
-            )}
+            renderInput={(params) => (<TextField {...params} label="Proveedor" sx={{ mb: 2 }} />)}
             disabled={loading}
             freeSolo
           />
-          {/* Accesorio */}
+
+          {/* Accesorios - MULTIPLE */}
           <Autocomplete
+            multiple
             options={accesorios}
             getOptionLabel={(option) => option.nombre}
-            value={accesorios.find((a) => a.id === selectedAccesorio) || null}
-            onChange={(_, value) => setSelectedAccesorio(value ? value.id : '')}
-            renderInput={(params) => <TextField {...params} label="Accesorio" sx={{ mb: 2 }} />}
+            value={accesorios.filter(a => selectedAccesorios.some(sa => sa.id === a.id))}
+            onChange={(_, values) => {
+              const newSelected = values.map(v => {
+                const existing = selectedAccesorios.find(sa => sa.id === v.id);
+                return { id: v.id, cantidad: existing?.cantidad || 1 };
+              });
+              setSelectedAccesorios(newSelected);
+            }}
+            renderInput={(params) => <TextField {...params} label="Accesorios" sx={{ mb: 1 }} />}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             disabled={loading}
           />
+
+          {selectedAccesorios.map(sa => {
+            const acc = accesorios.find(a => a.id === sa.id);
+            return (
+              <TextField
+                key={sa.id}
+                label={`Cantidad - ${acc?.nombre}`}
+                type="number"
+                value={sa.cantidad}
+                onChange={(e) => {
+                  const cantidad = Number(e.target.value);
+                  setSelectedAccesorios(selectedAccesorios.map(s => s.id === sa.id ? { ...s, cantidad } : s));
+                }}
+                sx={{ mb: 1 }}
+                disabled={loading}
+              />
+            );
+          })}
 
           {/* Reparación */}
           <Autocomplete
@@ -461,64 +397,32 @@ const AddVenta: React.FC = () => {
 
           {/* Cantidad y total */}
           <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-            <TextField
-              label="Cantidad"
-              type="number"
-              sx={{ flex: 1 }}
-              value={cantidad}
-              onChange={(e) => setCantidad(Number(e.target.value))}
-              disabled={loading}
-            />
-            <TextField
-              label="Total"
-              type="number"
-              sx={{ flex: 1 }}
-              value={total}
-              onChange={(e) => setTotal(Number(e.target.value))}
-              disabled={loading}
-            />
+            <TextField label="Cantidad" type="number" sx={{ flex: 1 }} value={cantidad} onChange={(e) => setCantidad(Number(e.target.value))} disabled={loading} />
+            <TextField label="Total" type="number" sx={{ flex: 1 }} value={total} onChange={(e) => setTotal(Number(e.target.value))} disabled={loading} />
           </Box>
+
+          {/* Descuento */}
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
-            <Button
-              variant="outlined"
-              onClick={() => setShowDescuento(!showDescuento)}
-              sx={{ flex: '1 1 30%' }}
-              disabled={loading}
-            >
+            <Button variant="outlined" onClick={() => setShowDescuento(!showDescuento)} sx={{ flex: '1 1 30%' }} disabled={loading}>
               {showDescuento ? 'Cancelar Descuento' : 'Agregar Descuento'}
             </Button>
 
             {showDescuento && (
               <>
-                <TextField
-                  label="Descuento (%)"
-                  type="number"
-                  sx={{ flex: '1 1 30%' }}
-                  value={porcentajeDescuento}
-                  onChange={(e) => setPorcentajeDescuento(Number(e.target.value))}
-                  disabled={loading}
-                />
+                <TextField label="Descuento (%)" type="number" sx={{ flex: '1 1 30%' }} value={porcentajeDescuento} onChange={(e) => setPorcentajeDescuento(Number(e.target.value))} disabled={loading} />
                 <Box sx={{ flex: '1 1 30%', display: 'flex', alignItems: 'center' }}>
                   <Typography>
-                    Nuevo Total: ${total && porcentajeDescuento
-                      ? (total - (total * (porcentajeDescuento / 100))).toFixed(2)
-                      : total}
+                    Nuevo Total: ${total && porcentajeDescuento ? (total - (total * (porcentajeDescuento / 100))).toFixed(2) : total}
                   </Typography>
                 </Box>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  onClick={() => {
-                    if (total && porcentajeDescuento >= 0) {
-                      const nuevoTotal = total - (total * (porcentajeDescuento / 100));
-                      setTotal(Number(nuevoTotal.toFixed(2)));
-                      setShowDescuento(false);
-                      setPorcentajeDescuento(0);
-                    }
-                  }}
-                  sx={{ flex: '1 1 30%' }}
-                  disabled={loading || !porcentajeDescuento}
-                >
+                <Button variant="contained" color="secondary" onClick={() => {
+                  if (total && porcentajeDescuento >= 0) {
+                    const nuevoTotal = total - (total * (porcentajeDescuento / 100));
+                    setTotal(Number(nuevoTotal.toFixed(2)));
+                    setShowDescuento(false);
+                    setPorcentajeDescuento(0);
+                  }
+                }} sx={{ flex: '1 1 30%' }} disabled={loading || !porcentajeDescuento}>
                   Aplicar Descuento
                 </Button>
               </>
@@ -527,89 +431,34 @@ const AddVenta: React.FC = () => {
 
           {/* Admin: IMEI */}
           {isAdmin && (
-            <TextField
-              label="IMEI"
-              fullWidth
-              sx={{ mb: 2 }}
-              value={imei}
-              onChange={(e) => setImei(e.target.value)}
-              disabled={loading}
-            />
+            <TextField label="IMEI" fullWidth sx={{ mb: 2 }} value={imei} onChange={(e) => setImei(e.target.value)} disabled={loading} />
           )}
+
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
             <FormControl sx={{ flex: '0 0 48%' }}>
               <InputLabel id="metodo-pago-label">Método de pago</InputLabel>
-              <Select
-                labelId="metodo-pago-label"
-                value={metodoPago}
-                onChange={(e) => setMetodoPago(e.target.value)}
-                label="Método de pago"
-                disabled={loading}
-              >
-                {metodoPagoOptions.map((option) => (
-                  <MenuItem key={option} value={option}>{option}</MenuItem>
-                ))}
+              <Select labelId="metodo-pago-label" value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} label="Método de pago" disabled={loading}>
+                {metodoPagoOptions.map((option) => (<MenuItem key={option} value={option}>{option}</MenuItem>))}
               </Select>
             </FormControl>
-            <TextField
-              label="Comprador"
-              sx={{ flex: '0 0 48%' }}
-              value={comprador}
-              onChange={(e) => setComprador(e.target.value)}
-              disabled={loading}
-            />
+            <TextField label="Comprador" sx={{ flex: '0 0 48%' }} value={comprador} onChange={(e) => setComprador(e.target.value)} disabled={loading} />
           </Box>
+
           {isAdmin && (
-            <Box
-              sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 2,
-                mb: 3,
-              }}
-            >
-              <TextField
-                label="Ganancia"
-                type="number"
-                sx={{ flex: '0 0 48%' }}
-                value={ganancia}
-                onChange={(e) => setGanancia(Number(e.target.value))}
-                disabled={loading}
-              />
-              <TextField
-                label="Fecha Ingreso"
-                type="date"
-                sx={{ flex: '0 0 48%' }}
-                value={fechaIngreso}
-                onChange={(e) => setFechaIngreso(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                disabled={loading}
-              />
-              <TextField
-                label="Fecha Venta"
-                type="date"
-                sx={{ flex: '0 0 48%' }}
-                value={fechaVenta}
-                onChange={(e) => setFechaVenta(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                disabled={loading}
-              />
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+              <TextField label="Ganancia" type="number" sx={{ flex: '0 0 48%' }} value={ganancia} onChange={(e) => setGanancia(Number(e.target.value))} disabled={loading} />
+              <TextField label="Fecha Ingreso" type="date" sx={{ flex: '0 0 48%' }} value={fechaIngreso} onChange={(e) => setFechaIngreso(e.target.value)} InputLabelProps={{ shrink: true }} disabled={loading} />
+              <TextField label="Fecha Venta" type="date" sx={{ flex: '0 0 48%' }} value={fechaVenta} onChange={(e) => setFechaVenta(e.target.value)} InputLabelProps={{ shrink: true }} disabled={loading} />
             </Box>
           )}
 
           <Button type="submit" variant="contained" fullWidth disabled={loading}>
             {loading ? <CircularProgress size={24} color="inherit" /> : 'Agregar Venta'}
           </Button>
-          
-          <Button
-          variant="outlined"
-          fullWidth
-          color="secondary"
-          sx={{ mt: 2 }}
-          onClick={() => navigate("/home")}
-        >
-          Volver al Inicio
-        </Button>
+
+          <Button variant="outlined" fullWidth color="secondary" sx={{ mt: 2 }} onClick={() => navigate("/home")}>
+            Volver al Inicio
+          </Button>
         </Box>
       </Paper>
     </Container>
