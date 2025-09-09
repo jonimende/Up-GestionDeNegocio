@@ -1,0 +1,36 @@
+name: Update Lockfiles
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-lockfile:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Clonar tu repo
+      - uses: actions/checkout@v3
+
+      # 2. Configurar Node.js
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20' # Cambia si usás otra versión
+
+      # 3. Actualizar lock file de Client
+      - name: Update Client lockfile
+        working-directory: ./Client
+        run: npm install
+
+      # 4. Actualizar lock file de Server
+      - name: Update Server lockfile
+        working-directory: ./Server
+        run: npm install
+
+      # 5. Commit y push de los cambios
+      - name: Commit updated lockfiles
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add Client/package-lock.json Server/package-lock.json
+          git commit -m "Update package-lock.json for Railway build" || echo "No changes to commit"
+          git push
