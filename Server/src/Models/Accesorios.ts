@@ -30,7 +30,8 @@ Accesorios.init(
     },
     precio_costo: { // Definición del nuevo campo
       type: DataTypes.FLOAT,
-      allowNull: false, // O true, si querés permitir que algunos no lo tengan al principio
+      allowNull: false,
+      defaultValue: 0,
       field: "precio_costo",
     },
     stock: {
