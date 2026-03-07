@@ -55,6 +55,7 @@ interface Venta {
     id: number;
     nombre: string;
     precio?: number;
+    precio_costo?: number; // ACÁ: Agregamos precio_costo
     VentaAccesorio?: { cantidad: number };
   }[];
 
@@ -602,8 +603,9 @@ const AdminVentas: React.FC = () => {
                             <Typography>Observaciones: {venta.Celular?.observaciones || "-"}</Typography>
                             <Typography>IMEI: {venta.Celular?.imei || "-"}</Typography>
                             <Typography>Fecha Ingreso: {venta.Celular?.fechaIngreso ? new Date(venta.Celular.fechaIngreso).toLocaleDateString() : "-"}</Typography>
+                            {/* ACÁ: Modificamos cómo se muestran los accesorios para incluir el costo */}
                             <Typography>Accesorios: {venta.accesorios && venta.accesorios.length > 0 
-                                ? venta.accesorios.map(a => `${a.nombre} x${(a as any).VentaAccesorio.cantidad}`).join(", ") 
+                                ? venta.accesorios.map(a => `${a.nombre} x${(a as any).VentaAccesorio.cantidad} (Costo: $${a.precio_costo ?? 0})`).join(", ") 
                                 : "-"}
                             </Typography>
                             <Typography>Descripción Reparación: {venta.Reparacion?.descripcion || "-"}</Typography>

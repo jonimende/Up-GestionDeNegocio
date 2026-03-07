@@ -49,7 +49,8 @@ interface Accesorio {
   id: number;
   nombre: string;
   stock: number;
-  precio: number; // agregado precio
+  precio: number; 
+  precio_costo?: number; // ACÁ: agregado precio de costo
   vendido: boolean;
 }
 
@@ -204,10 +205,11 @@ const ControlDeStock: React.FC = () => {
     const token = localStorage.getItem("token") || "";
 
     try {
-      const { id, nombre, stock, precio } = accesorioSeleccionado;
+      // ACÁ: Se agrega precio_costo a la data que se envía al PUT
+      const { id, nombre, stock, precio, precio_costo } = accesorioSeleccionado;
       const res = await axios.put<Accesorio>(
         `https://up-gestiondenegocio-production.up.railway.app/accesorios/${id}`,
-        { nombre, stock, precio },
+        { nombre, stock, precio, precio_costo },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAccesorios((prev) =>
@@ -246,7 +248,7 @@ const ControlDeStock: React.FC = () => {
         <Button
           variant="contained"
           color="primary"
-          onClick={() => navigate("/home")} // Asegúrate de tener `useNavigate`
+          onClick={() => navigate("/home")} 
         >
           Volver al Inicio
         </Button>
@@ -360,7 +362,8 @@ const ControlDeStock: React.FC = () => {
             <Table size="small" aria-label="tabla accesorios disponibles">
               <TableHead>
                 <TableRow>
-                  {["Nombre", "Stock", "Precio", "Acciones"].map((header) => (
+                  {/* ACÁ: Modificamos las cabeceras */}
+                  {["Nombre", "Stock", "Precio Venta", "Precio Costo", "Acciones"].map((header) => (
                     <TableCell key={header} sx={{ fontWeight: "bold" }}>
                       {header}
                     </TableCell>
@@ -373,6 +376,8 @@ const ControlDeStock: React.FC = () => {
                     <TableCell>{accesorio.nombre}</TableCell>
                     <TableCell>{accesorio.stock}</TableCell>
                     <TableCell>${accesorio.precio.toFixed(2)}</TableCell>
+                    {/* ACÁ: Nueva columna de costo */}
+                    <TableCell>${accesorio.precio_costo != null ? accesorio.precio_costo.toFixed(2) : "-"}</TableCell>
                     <TableCell>
                       <Button
                         variant="outlined"
@@ -581,11 +586,22 @@ const ControlDeStock: React.FC = () => {
           />
           <TextField
             type="number"
-            label="Precio"
+            label="Precio de Venta"
             value={accesorioSeleccionado?.precio || 0}
             onChange={(e) =>
               setAccesorioSeleccionado((prev) =>
                 prev ? { ...prev, precio: parseFloat(e.target.value) } : null
+              )
+            }
+          />
+          {/* ACÁ: Agregamos el input para Precio Costo */}
+          <TextField
+            type="number"
+            label="Precio de Costo"
+            value={accesorioSeleccionado?.precio_costo || 0}
+            onChange={(e) =>
+              setAccesorioSeleccionado((prev) =>
+                prev ? { ...prev, precio_costo: parseFloat(e.target.value) } : null
               )
             }
           />

@@ -39,7 +39,8 @@ export const ventasController = {
           {
             model: Accesorios,
             as: "accesorios",
-            attributes: ["id", "nombre", "precio"],
+            // ACÁ: Agregamos "precio_costo" a los atributos
+            attributes: ["id", "nombre", "precio", "precio_costo"], 
             through: { attributes: ["cantidad"] },
           },
         ],
@@ -75,7 +76,8 @@ export const ventasController = {
           {
             model: Accesorios,
             as: "accesorios",
-            attributes: ["id", "nombre", "precio"],
+            // ACÁ TAMBIÉN: Agregamos "precio_costo"
+            attributes: ["id", "nombre", "precio", "precio_costo"], 
             through: { attributes: ["cantidad"] },
           },
         ],
