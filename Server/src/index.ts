@@ -16,9 +16,9 @@ import MovimientoCaja from './Routes/movimientosCajaRoutes';
 const app = express();
 app.use(cors({
   origin: "https://up-gestion-de-negocio.vercel.app",
-   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-   allowedHeaders: ["Content-Type", "Authorization"],
-   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
 }));
 app.use(express.json());
 
@@ -42,21 +42,37 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 const PORT = process.env.PORT || 3001;
 
 async function startServer() {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ Conectado a PostgreSQL');
+  let retries = 5;
+  
+  while (retries > 0) {
+    try {
+      await sequelize.authenticate();
+      console.log('✅ Conectado a PostgreSQL');
 
-    await sequelize.sync({ alter: true }); 
-    console.log('✅ Tablas sincronizadas');
+      await sequelize.sync({ alter: true }); 
+      console.log('✅ Tablas sincronizadas');
 
-    console.log('👤 Usuarios seed creados');
+      console.log('👤 Usuarios seed creados');
 
-    app.listen(PORT, () => {
-      console.log(`Servidor corriendo en puerto ${PORT}`);
-    });
+      app.listen(PORT, () => {
+        console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+      });
 
-  } catch (error) {
-    console.error('❌ No se pudo conectar a la base de datos:', error);
+      // Si todo sale bien, rompemos el bucle para que no siga reintentando
+      break; 
+
+    } catch (error) {
+      console.log(`⏳ La base de datos no está lista. Reintentando en 5 segundos... (Quedan ${retries - 1} intentos)`);
+      retries -= 1;
+      
+      if (retries === 0) {
+        console.error('❌ No se pudo conectar a la base de datos después de varios intentos:', error);
+        process.exit(1); // Le avisa a Railway que el proceso falló críticamente
+      }
+      
+      // Espera 5 segundos antes del siguiente intento
+      await new Promise(res => setTimeout(res, 5000));
+    }
   }
 }
 
