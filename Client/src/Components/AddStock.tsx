@@ -42,15 +42,16 @@ type CelularForm = {
   fechaIngreso: string;
   observaciones: string;
   stock: string;
-  // Cambié para manejar proveedor como union id:number | nombre:string
   idProveedor: number | string;
   imei: string;
 };
 
+// ACÁ: Se agregó precio_costo
 type AccesorioForm = {
   nombre: string;
   stock: string;
   precio: string;
+  precio_costo: string; 
 };
 
 const AddStock: React.FC<Props> = ({ onClose }) => {
@@ -79,10 +80,12 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     imei: "",
   });
 
+  // ACÁ: Se inicializó precio_costo
   const [accesorioForm, setAccesorioForm] = useState<AccesorioForm>({
     nombre: "",
     stock: "",
     precio: "",
+    precio_costo: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -222,7 +225,6 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     try {
       const token = localStorage.getItem("token") || "";
       
-      // Preparar payload enviando idProveedor o proveedorNombre según corresponda
       const payload: any = {
         modelo,
         almacenamiento,
@@ -313,7 +315,6 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
 
       const nuevoProveedor = await res.json();
 
-      // Agregar a la lista y seleccionarlo
       setProveedores((prev) => [...prev, nuevoProveedor]);
       setCelularForm((prev) => ({ ...prev, idProveedor: nuevoProveedor.id }));
       setNewProveedorNombre("");
@@ -326,20 +327,22 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
     }
   };
 
-
   const submitAccesorio = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
 
-    const { nombre, stock, precio } = accesorioForm;
+    // ACÁ: Se extrae precio_costo
+    const { nombre, stock, precio, precio_costo } = accesorioForm;
 
-    if (!nombre.trim() || !stock || !precio) {
+    // ACÁ: Se valida precio_costo
+    if (!nombre.trim() || !stock || !precio || !precio_costo) {
       setError("Por favor, completa todos los campos obligatorios (*)");
       return;
     }
 
-    if (parseInt(stock) < 0 || parseFloat(precio) < 0) {
+    // ACÁ: Se verifica que precio_costo no sea negativo
+    if (parseInt(stock) < 0 || parseFloat(precio) < 0 || parseFloat(precio_costo) < 0) {
       setError("Los valores numéricos deben ser mayores o iguales a cero");
       return;
     }
@@ -351,6 +354,7 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
         nombre,
         stock: parseInt(stock),
         precio: parseFloat(precio),
+        precio_costo: parseFloat(precio_costo), // ACÁ: Se envía al backend
       };
 
       const res = await fetch("https://up-gestiondenegocio-production.up.railway.app/accesorios", {
@@ -368,7 +372,8 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
       }
 
       setSuccessMsg("Accesorio agregado con éxito");
-      setAccesorioForm({ nombre: "", stock: "", precio: "" });
+      // ACÁ: Se limpia el formulario incluyendo precio_costo
+      setAccesorioForm({ nombre: "", stock: "", precio: "", precio_costo: "" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error inesperado";
       setError(msg);
@@ -498,7 +503,6 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
                 }
               }}
               onInputChange={(event, newInputValue) => {
-                // Esto se asegura de que el input escrito manualmente se refleje en el estado
                 if (newInputValue !== "") {
                   setCelularForm((prev) => ({ ...prev, idProveedor: newInputValue }));
                 }
@@ -624,10 +628,20 @@ const AddStock: React.FC<Props> = ({ onClose }) => {
               required
             />
             <TextField
-              label="Precio *"
+              label="Precio de Venta *"
               name="precio"
               type="number"
               value={accesorioForm.precio}
+              onChange={handleAccesorioChange}
+              inputProps={{ min: 0, step: "0.01" }}
+              required
+            />
+            {/* ACÁ: Nuevo input para Precio de Costo */}
+            <TextField
+              label="Precio de Costo *"
+              name="precio_costo"
+              type="number"
+              value={accesorioForm.precio_costo}
               onChange={handleAccesorioChange}
               inputProps={{ min: 0, step: "0.01" }}
               required

@@ -25,6 +25,7 @@ interface Celular {
   bateria: string;
   color: string;
   precio: number;
+  costo?: number; // ACÁ: Agregamos el costo para calcular ganancia
   observaciones?: string | null;
   fechaIngreso?: string | null;
   imei?: string | null;
@@ -35,6 +36,7 @@ interface Item {
   id: number;
   nombre: string;
   precio?: number;
+  precio_costo?: number; 
 }
 
 interface Reparacion {
@@ -75,7 +77,6 @@ const AddVenta: React.FC = () => {
     fechaIngreso: null,
   });
 
-  // NUEVO: Soporte para múltiples accesorios
   const [selectedAccesorios, setSelectedAccesorios] = useState<{ id: number; cantidad: number }[]>([]);
   const [selectedReparacion, setSelectedReparacion] = useState<number | ''>('');
   const [cantidad, setCantidad] = useState<number>(1);
@@ -96,7 +97,6 @@ const AddVenta: React.FC = () => {
   const [showDescuento, setShowDescuento] = useState(false);
   const [porcentajeDescuento, setPorcentajeDescuento] = useState<number>(0);
 
-  // Nuevo estado para el nombre del proveedor editable
   const [proveedorNombre, setProveedorNombre] = useState<string>('');
 
   const refetchLists = async () => {
@@ -180,17 +180,7 @@ const AddVenta: React.FC = () => {
     }
   };
 
-  const handleProveedorSelect = (value: Proveedor | null) => {
-    if (value) {
-      setCelularData({ ...celularData, proveedorId: value.id });
-      setProveedorNombre(value.nombre);
-    } else {
-      setCelularData({ ...celularData, proveedorId: null });
-      setProveedorNombre('');
-    }
-  };
-
-  // Calcular total cada vez que cambian celular, accesorios o cantidad
+  // Calcular total
   useEffect(() => {
     let precioCelular = 0;
     if (selectedCelularId !== '') {
@@ -206,6 +196,28 @@ const AddVenta: React.FC = () => {
     const nuevoTotal = (precioCelular + precioAccesorios) * cantidad;
     setTotal(nuevoTotal);
   }, [cantidad, selectedCelularId, selectedAccesorios, celulares, accesorios]);
+
+  // ACÁ: NUEVO EFECTO para calcular la Ganancia automáticamente
+  useEffect(() => {
+    if (isAdmin && typeof total === 'number') {
+      let costoCelular = 0;
+      if (selectedCelularId !== '') {
+        const celular = celulares.find(c => c.id === selectedCelularId);
+        if (celular && celular.costo) costoCelular = celular.costo;
+      }
+
+      let costoAccesorios = 0;
+      selectedAccesorios.forEach(sa => {
+        const acc = accesorios.find(a => a.id === sa.id);
+        costoAccesorios += (acc?.precio_costo || 0) * sa.cantidad;
+      });
+
+      const costoTotal = (costoCelular + costoAccesorios) * cantidad;
+      
+      const gananciaCalculada = total - costoTotal;
+      setGanancia(gananciaCalculada >= 0 ? Number(gananciaCalculada.toFixed(2)) : 0);
+    }
+  }, [total, cantidad, selectedCelularId, selectedAccesorios, celulares, accesorios, isAdmin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,7 +261,6 @@ const AddVenta: React.FC = () => {
       await refetchLists();
 
       setSuccess('Venta agregada correctamente');
-      // RESET
       setCantidad(1);
       setTotal('');
       setSelectedCelularId('');
@@ -446,6 +457,7 @@ const AddVenta: React.FC = () => {
 
           {isAdmin && (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+              {/* ACÁ: El campo de Ganancia sigue siendo editable, pero se autocompleta con el cálculo */}
               <TextField label="Ganancia" type="number" sx={{ flex: '0 0 48%' }} value={ganancia} onChange={(e) => setGanancia(Number(e.target.value))} disabled={loading} />
               <TextField label="Fecha Ingreso" type="date" sx={{ flex: '0 0 48%' }} value={fechaIngreso} onChange={(e) => setFechaIngreso(e.target.value)} InputLabelProps={{ shrink: true }} disabled={loading} />
               <TextField label="Fecha Venta" type="date" sx={{ flex: '0 0 48%' }} value={fechaVenta} onChange={(e) => setFechaVenta(e.target.value)} InputLabelProps={{ shrink: true }} disabled={loading} />

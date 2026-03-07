@@ -7,7 +7,7 @@ import { isAdmin } from "../Middlewares/isAdmin";
 const router = Router();
 
 // GET - obtener todos los accesorios
-router.get("/",authenticateToken, async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
   try {
     const accesorios = await Accesorios.findAll();
     res.json(accesorios);
@@ -17,7 +17,7 @@ router.get("/",authenticateToken, async (req, res) => {
   }
 });
 
-router.get("/disponibles",authenticateToken, async (req, res) => {
+router.get("/disponibles", authenticateToken, async (req, res) => {
   try {
     const disponibles = await Accesorios.findAll({
       where: { vendido: false },
@@ -27,8 +27,9 @@ router.get("/disponibles",authenticateToken, async (req, res) => {
     res.status(500).json({ error: "Error al obtener accesorios disponibles" });
   }
 });
+
 // GET - obtener un accesorio por ID
-router.get("/:id",authenticateToken, async (req, res) => {
+router.get("/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const accesorio = await Accesorios.findByPk(id);
@@ -45,25 +46,37 @@ router.get("/:id",authenticateToken, async (req, res) => {
 // POST - crear un nuevo accesorio
 router.post("/", authenticateToken, async (req, res) => {
   try {
-    const { nombre, stock, precio } = req.body;
+    // Agregamos precio_costo a la desestructuración
+    const { nombre, stock, precio, precio_costo } = req.body;
 
     if (!nombre) {
       return res.status(400).json({ message: "El nombre es obligatorio" });
     }
     if (precio === undefined || precio === null) {
-      return res.status(400).json({ message: "El precio es obligatorio" });
+      return res.status(400).json({ message: "El precio de venta es obligatorio" });
+    }
+    // Nueva validación para precio_costo
+    if (precio_costo === undefined || precio_costo === null) {
+      return res.status(400).json({ message: "El precio de costo es obligatorio" });
     }
 
     const stockNum = stock ?? 0;
     const precioNum = parseFloat(precio);
+    const precioCostoNum = parseFloat(precio_costo);
+
     if (isNaN(precioNum) || precioNum < 0) {
-      return res.status(400).json({ message: "Precio inválido" });
+      return res.status(400).json({ message: "Precio de venta inválido" });
+    }
+    // Validamos que el costo también sea un número válido
+    if (isNaN(precioCostoNum) || precioCostoNum < 0) {
+      return res.status(400).json({ message: "Precio de costo inválido" });
     }
 
     const nuevoAccesorio = await Accesorios.create({
       nombre,
       stock: stockNum,
       precio: precioNum,
+      precio_costo: precioCostoNum, // Guardamos el nuevo campo
     });
 
     res.status(201).json(nuevoAccesorio);
@@ -73,9 +86,8 @@ router.post("/", authenticateToken, async (req, res) => {
   }
 });
 
-
 // PUT - actualizar un accesorio por ID
-router.put("/:id",authenticateToken, isAdmin, async (req, res) => {
+router.put("/:id", authenticateToken, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const accesorio = await Accesorios.findByPk(id);
@@ -84,12 +96,14 @@ router.put("/:id",authenticateToken, isAdmin, async (req, res) => {
       return res.status(404).json({ message: "Accesorio no encontrado" });
     }
 
-    const { nombre, stock, precio } = req.body;
+    // Extraemos precio_costo también en la actualización
+    const { nombre, stock, precio, precio_costo } = req.body;
 
     await accesorio.update({
       nombre: nombre ?? accesorio.nombre,
       stock: stock ?? accesorio.stock,
       precio: precio ?? accesorio.precio,
+      precio_costo: precio_costo ?? accesorio.precio_costo, // Actualizamos si viene en el body
     });
 
     res.json(accesorio);
@@ -100,7 +114,7 @@ router.put("/:id",authenticateToken, isAdmin, async (req, res) => {
 });
 
 // DELETE - eliminar un accesorio por ID
-router.delete("/:id",authenticateToken, isAdmin, async (req, res) => {
+router.delete("/:id", authenticateToken, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const accesorio = await Accesorios.findByPk(id);
