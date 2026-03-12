@@ -2,39 +2,66 @@ import { Request, Response } from 'express';
 import { Op, WhereOptions } from 'sequelize';
 import { Venta } from '../Models/Ventas';
 import { MovimientoCaja } from '../Models/MovimientoCaja';
+import { Celular } from '../Models/Celulares';     // Asegurate de que la ruta sea correcta
+import { Accesorios } from '../Models/Accesorios'; // Asegurate de que la ruta sea correcta
 
 export const cajaController = {
   obtenerCaja: async function (req: Request, res: Response) {
     try {
       const tipo = req.query.tipo as string;
       const metodoPago = req.query.metodoPago as string;
+      const fechaParam = req.query.fecha as string; // Ej: "2026-03-11"
 
-      if (!tipo || (tipo !== 'diaria' && tipo !== 'mensual')) {
-        return res.status(400).json({ error: 'Tipo inválido. Debe ser "diaria" o "mensual".' });
-      }
-
-      const ahora = new Date();
       let inicio: Date;
+      let fin: Date;
 
-      if (tipo === 'diaria') {
-        inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0);
-      } else {
+      // 1. LÓGICA DE FECHAS (Diaria por fecha específica o mensual)
+      if (tipo === 'mensual') {
+        const ahora = new Date();
         inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0, 0);
+        fin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+      } else {
+        // Lógica Diaria
+        if (fechaParam) {
+          const parts = fechaParam.split('-');
+          const year = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10) - 1; // Los meses en JS van de 0 a 11
+          const day = parseInt(parts[2], 10);
+          inicio = new Date(year, month, day, 0, 0, 0, 0);
+          fin = new Date(year, month, day, 23, 59, 59, 999);
+        } else {
+          // Si no mandan fecha, por defecto es "hoy"
+          const ahora = new Date();
+          inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0);
+          fin = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59, 999);
+        }
       }
 
       const whereBase: WhereOptions = {
-        fecha: { [Op.between]: [inicio, ahora] },
+        fecha: { [Op.between]: [inicio, fin] },
       };
 
       if (metodoPago && metodoPago !== 'Todos') {
         whereBase['metodoPago'] = metodoPago;
       }
 
-      // Traer todas las ventas en el rango
-      const ventas = await Venta.findAll({ where: whereBase });
+      // 2. TRAER VENTAS CON SUS RELACIONES (Para calcular costos)
+      const ventas = await Venta.findAll({ 
+        where: whereBase,
+        include: [
+          { model: Celular, attributes: ['costo'] },
+          { 
+            model: Accesorios, 
+            as: 'accesorios', 
+            attributes: ['precio_costo'],
+            through: { attributes: ["cantidad"] } 
+          }
+        ]
+      });
 
       let totalGeneral = 0;
       let cantidadGeneral = 0;
+      let totalCosto = 0; // Para la ganancia
 
       let totalCelulares = 0;
       let cantidadCelulares = 0;
@@ -42,15 +69,30 @@ export const cajaController = {
       let totalAccesorios = 0;
       let cantidadAccesorios = 0;
 
-      ventas.forEach((venta) => {
+      ventas.forEach((venta: any) => {
         const monto = parseFloat(venta.total.toString());
         const cant = venta.cantidad;
         const tieneCelular = !!venta.celularId;
-        const tieneAccesorio = !!venta.accesorioId;
+        const tieneAccesorio = !!venta.accesorioId || (venta.accesorios && venta.accesorios.length > 0);
 
         totalGeneral += monto;
         cantidadGeneral += cant;
 
+        // Sumar costos de celulares
+        if (venta.Celular && venta.Celular.costo) {
+          totalCosto += parseFloat(venta.Celular.costo.toString()) * cant;
+        }
+
+        // Sumar costos de accesorios
+        if (venta.accesorios && venta.accesorios.length > 0) {
+          venta.accesorios.forEach((acc: any) => {
+            const cantidadAcc = acc.VentaAccesorio.cantidad;
+            const costoAcc = acc.precio_costo ? parseFloat(acc.precio_costo.toString()) : 0;
+            totalCosto += (costoAcc * cantidadAcc);
+          });
+        }
+
+        // Clasificación para el resumen
         if (tieneCelular && !tieneAccesorio) {
           totalCelulares += monto;
           cantidadCelulares += cant;
@@ -58,27 +100,36 @@ export const cajaController = {
           totalAccesorios += monto;
           cantidadAccesorios += cant;
         } else if (tieneCelular && tieneAccesorio) {
-          // Clasificar por defecto como venta de celular
           totalCelulares += monto;
           cantidadCelulares += cant;
         }
       });
 
-      // Movimientos (gastos y retiros)
+      // 3. MOVIMIENTOS (Gastos, Retiros e INGRESOS iniciales)
       const movimientos = await MovimientoCaja.findAll({
         where: {
-          fecha: { [Op.between]: [inicio, ahora] },
+          fecha: { [Op.between]: [inicio, fin] },
           ...(metodoPago && metodoPago !== 'Todos' ? { metodoPago } : {}),
         },
         order: [['fecha', 'DESC']],
       });
 
-      const totalMovimientos = movimientos.reduce(
-        (acc, mov) => acc + parseFloat(mov.monto.toString()),
-        0
-      );
+      let totalEgresos = 0;
+      let totalIngresosCaja = 0;
 
-      const totalNeto = totalGeneral - totalMovimientos;
+      movimientos.forEach((mov: any) => {
+        const m = parseFloat(mov.monto.toString());
+        if (mov.tipoMovimiento === 'ingreso') {
+          totalIngresosCaja += m;
+        } else {
+          totalEgresos += m; // Gastos y retiros
+        }
+      });
+
+      // 4. CÁLCULOS FINALES
+      const ganancia = totalGeneral - totalCosto;
+      // El total neto físico = lo que se vendió + plata que se puso en caja - plata que se sacó
+      const totalNeto = totalGeneral + totalIngresosCaja - totalEgresos; 
       const balance = totalNeto;
 
       res.json({
@@ -87,6 +138,7 @@ export const cajaController = {
         metodoPago: metodoPago || 'Todos',
         totalNeto,
         balance,
+        ganancia, // Nuevo campo enviado al front
         movimientos,
         celulares: {
           total: totalCelulares,
@@ -107,7 +159,8 @@ export const cajaController = {
     try {
       const { tipoMovimiento, monto, metodoPago, descripcion, usuarioId } = req.body;
 
-      if (!['gasto', 'retiro'].includes(tipoMovimiento)) {
+      // Agregamos "ingreso" a los tipos válidos
+      if (!['gasto', 'retiro', 'ingreso'].includes(tipoMovimiento)) {
         return res.status(400).json({ error: 'Tipo de movimiento inválido' });
       }
       if (monto === undefined || isNaN(monto) || monto <= 0) {
@@ -135,12 +188,17 @@ export const cajaController = {
 
   obtenerBalanceCaja: async function (req: Request, res: Response) {
     try {
-      const totalIngresos = (await Venta.sum('total')) || 0;
-      const totalEgresos = (await MovimientoCaja.sum('monto')) || 0;
+      const totalIngresosVentas = (await Venta.sum('total')) || 0;
+      
+      // Sumamos también los movimientos tipo "ingreso"
+      const movimientosIngreso = await MovimientoCaja.sum('monto', { where: { tipoMovimiento: 'ingreso' } }) || 0;
+      
+      const totalEgresosGastos = await MovimientoCaja.sum('monto', { where: { tipoMovimiento: ['gasto', 'retiro'] } }) || 0;
 
-      const balance = totalIngresos - totalEgresos;
+      const totalIngresos = totalIngresosVentas + movimientosIngreso;
+      const balance = totalIngresos - totalEgresosGastos;
 
-      res.json({ balance, totalIngresos, totalEgresos });
+      res.json({ balance, totalIngresos, totalEgresos: totalEgresosGastos });
     } catch (error) {
       console.error('Error obteniendo balance caja:', error);
       res.status(500).json({ error: 'Error al obtener balance' });
@@ -158,6 +216,7 @@ export const cajaController = {
       res.status(500).json({ error: 'Error al listar movimientos' });
     }
   },
+  
   eliminarMovimiento: async function (req: Request, res: Response) {
     const { id } = req.params;
 
