@@ -15,7 +15,7 @@ import MovimientoCaja from './Routes/movimientosCajaRoutes';
 
 const app = express();
 app.use(cors({
-  origin: "https://up-gestion-de-negocio.vercel.app",
+  origin: ["https://up-gestion-de-negocio.vercel.app", "http://localhost:3000"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
