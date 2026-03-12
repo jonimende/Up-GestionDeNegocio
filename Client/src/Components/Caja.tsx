@@ -34,12 +34,29 @@ interface DecodedToken {
   id: number;
 }
 
+// Interfaces para tipar las ventas
+interface VentaAccesorioDetalle {
+  nombre: string;
+  VentaAccesorio: { cantidad: number };
+}
+
+interface VentaDetalle {
+  id: number;
+  fecha: string;
+  total: number;
+  cantidad: number;
+  metodoPago: string;
+  Celular?: { modelo: string };
+  accesorios?: VentaAccesorioDetalle[];
+}
+
 interface ResCaja {
   total: number;
   cantidad: number;
   totalNeto: number;
   balance: number;
-  ganancia?: number; // Agregamos la ganancia que ahora manda el backend
+  ganancia?: number;
+  ventas: VentaDetalle[]; // Recibimos las ventas detalladas
   celulares?: { total: number; cantidad: number };
   accesorios?: { total: number; cantidad: number };
 }
@@ -107,7 +124,6 @@ const Caja = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      // Filtramos en el front los movimientos del día seleccionado
       const movimientosDelDia = resMov.data.filter((mov) => mov.fecha.startsWith(fecha));
       setMovimientos(movimientosDelDia);
       setError(null);
@@ -226,14 +242,10 @@ const Caja = () => {
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-      {/* Contenedor Principal (Reemplaza a Grid) */}
-      <Box 
-        display="flex" 
-        flexDirection={{ xs: "column", md: "row" }} 
-        gap={3} 
-        mb={3}
-      >
-        {/* COLUMNA IZQUIERDA: Totales (Cambia según rol) */}
+      {/* Contenedor Principal de Totales y Formulario */}
+      <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={3} mb={3}>
+        
+        {/* COLUMNA IZQUIERDA: Totales */}
         <Box flex={{ xs: "1 1 auto", md: "0 0 40%" }}>
           <Card elevation={3} sx={{ borderRadius: 3, backgroundColor: isAdmin ? "#f8f9fa" : "#e3f2fd", height: "100%" }}>
             <CardContent>
@@ -278,7 +290,7 @@ const Caja = () => {
           </Card>
         </Box>
 
-        {/* COLUMNA DERECHA: Agregar Movimientos (Para todos los usuarios) */}
+        {/* COLUMNA DERECHA: Agregar Movimientos */}
         <Box flex={{ xs: "1 1 auto", md: "1 1 auto" }}>
           <Card elevation={3} sx={{ borderRadius: 3, height: "100%" }}>
             <CardContent>
@@ -323,15 +335,66 @@ const Caja = () => {
         </Box>
       </Box>
 
+      {/* NUEVA TABLA: DETALLE DE VENTAS DEL DÍA */}
+      <Box mb={3}>
+        <Card elevation={3} sx={{ borderRadius: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ color: "#2e7d32" }}>
+              Ventas del Día
+            </Typography>
+            {!cajaData?.ventas || cajaData.ventas.length === 0 ? (
+              <Typography color="textSecondary">No hay ventas registradas en esta fecha.</Typography>
+            ) : (
+              <Box overflow="auto">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Hora</TableCell>
+                      <TableCell>Detalle del Producto</TableCell>
+                      <TableCell>Medio de Pago</TableCell>
+                      <TableCell align="right">Monto Total</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {cajaData.ventas.map((venta) => {
+                      // Construir la descripción de lo vendido
+                      let descripcion = "";
+                      if (venta.Celular) {
+                        descripcion += `Celular: ${venta.Celular.modelo}`;
+                      }
+                      if (venta.accesorios && venta.accesorios.length > 0) {
+                        const accNombres = venta.accesorios.map(a => `${a.VentaAccesorio.cantidad}x ${a.nombre}`).join(", ");
+                        descripcion += descripcion ? ` | Accesorios: ${accNombres}` : `Accesorios: ${accNombres}`;
+                      }
+
+                      return (
+                        <TableRow key={venta.id}>
+                          <TableCell>{new Date(venta.fecha).toLocaleTimeString()}</TableCell>
+                          <TableCell sx={{ fontWeight: 500 }}>{descripcion || "Venta sin especificar"}</TableCell>
+                          <TableCell>{venta.metodoPago || "N/A"}</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: "bold", color: "#2e7d32" }}>
+                            ${Number(venta.total).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      </Box>
+
       {/* TABLA DE MOVIMIENTOS */}
       <Box>
         <Card elevation={3} sx={{ borderRadius: 3 }}>
           <CardContent>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" gutterBottom color="textSecondary">
               Movimientos del Día
             </Typography>
             {movimientos.length === 0 ? (
-              <Typography color="textSecondary">No hay movimientos registrados hoy.</Typography>
+              <Typography color="textSecondary">No hay movimientos registrados en esta fecha.</Typography>
             ) : (
               <Box overflow="auto">
                 <Table size="small">
