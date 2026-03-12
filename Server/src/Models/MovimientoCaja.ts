@@ -3,7 +3,7 @@ import { sequelize } from '../db'; // asumo que este es tu archivo de conexión
 
 interface MovimientoCajaAttributes {
   id: number;
-  tipoMovimiento: 'gasto' | 'retiro';
+  tipoMovimiento: 'gasto' | 'retiro' | 'ingreso';
   monto: number;
   metodoPago: string;
   descripcion?: string | null;
@@ -17,7 +17,7 @@ interface MovimientoCajaCreationAttributes extends Optional<MovimientoCajaAttrib
 
 export class MovimientoCaja extends Model<MovimientoCajaAttributes, MovimientoCajaCreationAttributes> implements MovimientoCajaAttributes {
   public id!: number;
-  public tipoMovimiento!: 'gasto' | 'retiro';
+  public tipoMovimiento!: 'gasto' | 'retiro' | 'ingreso';
   public monto!: number;
   public metodoPago!: string;
   public descripcion!: string | null;
@@ -36,7 +36,7 @@ MovimientoCaja.init(
       primaryKey: true,
     },
     tipoMovimiento: {
-      type: DataTypes.ENUM('gasto', 'retiro'),
+      type: DataTypes.ENUM('gasto', 'retiro', 'ingreso'),
       allowNull: false,
       field: 'tipomovimiento',
     },
