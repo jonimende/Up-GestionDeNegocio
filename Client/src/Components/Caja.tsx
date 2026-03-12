@@ -10,7 +10,6 @@ import {
   FormControl,
   InputLabel,
   Button,
-  Paper,
   CircularProgress,
   TextField,
   Alert,
@@ -25,6 +24,9 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Card,
+  CardContent,
+  Divider,
 } from "@mui/material";
 
 interface DecodedToken {
@@ -35,13 +37,16 @@ interface DecodedToken {
 interface ResCaja {
   total: number;
   cantidad: number;
+  totalNeto: number;
+  balance: number;
+  ganancia?: number; // Agregamos la ganancia que ahora manda el backend
   celulares?: { total: number; cantidad: number };
   accesorios?: { total: number; cantidad: number };
 }
 
 interface Movimiento {
   id: number;
-  tipoMovimiento: "gasto" | "retiro";
+  tipoMovimiento: "gasto" | "retiro" | "ingreso";
   monto: number;
   metodoPago: string;
   descripcion: string;
@@ -49,545 +54,346 @@ interface Movimiento {
   usuarioId: number;
 }
 
-interface CurrencyResponse {
-  data: {
-    ARS: {
-      value: number;
-    };
-    USD: {
-      value: number;
-    };
-  };
-}
-
 const Caja = () => {
   const navigate = useNavigate();
 
-  const [tipo, setTipo] = useState<"diaria" | "mensual">("diaria");
+  // Estados de fecha y filtros
+  const hoy = new Date().toISOString().split("T")[0];
+  const [fecha, setFecha] = useState<string>(hoy);
   const [metodoPago, setMetodoPago] = useState<"Efectivo" | "Transferencia" | "Todos">("Todos");
-  const [total, setTotal] = useState<number>(0);
-  const [cantidad, setCantidad] = useState<number>(0);
-  const [celularesData, setCelularesData] = useState({ total: 0, cantidad: 0 });
-  const [accesoriosData, setAccesoriosData] = useState({ total: 0, cantidad: 0 });
-  const [balance, setBalance] = useState<number>(0);
+
+  // Estados de datos
+  const [cajaData, setCajaData] = useState<ResCaja | null>(null);
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [totalEnPesos, setTotalEnPesos] = useState<number | null>(null);
-  const [tasaCambio, setTasaCambio] = useState<number | null>(null);
-  const [convirtiendo, setConvirtiendo] = useState(false);
-  const [errorConversion, setErrorConversion] = useState<string | null>(null);
-
-  const [tipoMovimiento, setTipoMovimiento] = useState<"gasto" | "retiro">("gasto");
-  const [montoMovimiento, setMontoMovimiento] = useState<number>(0);
+  // Estados de formulario de movimientos
+  const [tipoMovimiento, setTipoMovimiento] = useState<"gasto" | "retiro" | "ingreso">("gasto");
+  const [montoMovimiento, setMontoMovimiento] = useState<number | "">("");
   const [metodoPagoMovimiento, setMetodoPagoMovimiento] = useState<"Efectivo" | "Transferencia">("Efectivo");
   const [descripcionMovimiento, setDescripcionMovimiento] = useState<string>("");
-  const [movimientoError, setMovimientoError] = useState<string | null>(null);
-  const [movimientoSuccess, setMovimientoSuccess] = useState<string | null>(null);
   const [enviandoMovimiento, setEnviandoMovimiento] = useState(false);
 
+  // Autenticación
   const [isAdmin, setIsAdmin] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
 
+  // UI States (Snackbar y Dialogos)
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [movimientoAEliminar, setMovimientoAEliminar] = useState<number | null>(null);
+  const [eliminando, setEliminando] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
     open: false,
     message: "",
     severity: "success",
   });
-  const [eliminando, setEliminando] = useState(false);
 
-  const obtenerCaja = async () => {
+  const apiUrl = "https://up-gestiondenegocio-production.up.railway.app";
+
+  const cargarDatos = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
+    setLoading(true);
     try {
-      const res = await axios.get<ResCaja>(
-        "https://up-gestiondenegocio-production.up.railway.app/ventas/caja/consulta",
-        {
-          params: { tipo, metodoPago },
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setTotal(res.data.total);
-      setCantidad(res.data.cantidad);
-      setCelularesData(res.data.celulares || { total: 0, cantidad: 0 });
-      setAccesoriosData(res.data.accesorios || { total: 0, cantidad: 0 });
-      setError(null);
-      setTotalEnPesos(null);
-      setTasaCambio(null);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Error al obtener la caja.");
-    }
-  };
-
-  const obtenerMovimientos = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    try {
-      const res = await axios.get<Movimiento[]>(
-        "https://up-gestiondenegocio-production.up.railway.app/caja/movimientos",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setMovimientos(res.data.map((mov) => ({ ...mov, monto: Number(mov.monto) })));
-    } catch (err) {
-      console.error("Error cargando movimientos:", err);
-    }
-  };
-
-  const obtenerBalance = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    try {
-      const res = await axios.get<{ balance: number }>(
-        "https://up-gestiondenegocio-production.up.railway.app/caja/movimientos/balance",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setBalance(res.data.balance);
-    } catch (err) {
-      console.error("Error obteniendo balance:", err);
-    }
-  };
-
-  const agregarMovimiento = async () => {
-    if (montoMovimiento <= 0) return setMovimientoError("El monto debe ser mayor que cero");
-    if (!descripcionMovimiento.trim()) return setMovimientoError("La descripción es obligatoria");
-
-    setMovimientoError(null);
-    setMovimientoSuccess(null);
-    setEnviandoMovimiento(true);
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setMovimientoError("No estás autenticado");
-      setEnviandoMovimiento(false);
-      return;
-    }
-
-    try {
-      await axios.post(
-        "https://up-gestiondenegocio-production.up.railway.app/caja/movimientos",
-        {
-          tipoMovimiento,
-          monto: montoMovimiento,
-          metodoPago: metodoPagoMovimiento,
-          descripcion: descripcionMovimiento,
-          usuarioId: userId,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setMovimientoSuccess("Movimiento agregado correctamente");
-      setMontoMovimiento(0);
-      setDescripcionMovimiento("");
-      await obtenerCaja();
-      await obtenerMovimientos();
-      await obtenerBalance();
-    } catch (error) {
-      setMovimientoError("Error al agregar movimiento");
-    } finally {
-      setEnviandoMovimiento(false);
-    }
-  };
-
-  const consultarDolar = async () => {
-    setConvirtiendo(true);
-    setErrorConversion(null);
-    try {
-      const response = await axios.get<CurrencyResponse>(
-        "https://api.currencyapi.com/v3/latest",
-        {
-          params: {
-            apikey: process.env.REACT_APP_CURRENCY_API_KEY,
-            base_currency: "ARS",
-            currencies: "USD",
-          },
-        }
-      );
-      const tasa = response.data.data.USD.value;
-      setTasaCambio(tasa);
-      const resultado = totalNeto * tasa;
-      setTotalEnPesos(resultado);
-    } catch (err) {
-      setErrorConversion("Error al obtener la cotización del dólar.");
-    } finally {
-      setConvirtiendo(false);
-    }
-  };
-
-  const totalMovimientos = movimientos.reduce((acc, mov) => acc + mov.monto, 0);
-  const totalNeto = total - totalMovimientos;
-
-  const handleEliminarClick = (id: number) => {
-    setMovimientoAEliminar(id);
-    setConfirmOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (movimientoAEliminar === null) return;
-
-    setEliminando(true);
-    setConfirmOpen(false);
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setSnackbar({ open: true, message: "No estás autenticado", severity: "error" });
-      setEliminando(false);
-      return;
-    }
-
-    try {
-      await axios.delete(`https://up-gestiondenegocio-production.up.railway.app/caja/movimientos/${movimientoAEliminar}`, {
+      const resCaja = await axios.get<ResCaja>(`${apiUrl}/ventas/caja/consulta`, {
+        params: { tipo: "diaria", metodoPago, fecha },
         headers: { Authorization: `Bearer ${token}` },
       });
-      setSnackbar({ open: true, message: "Movimiento eliminado correctamente", severity: "success" });
-      await obtenerMovimientos();
-      await obtenerCaja();
-      await obtenerBalance();
-    } catch (err) {
-      setSnackbar({ open: true, message: "No se pudo eliminar el movimiento", severity: "error" });
+      setCajaData(resCaja.data);
+
+      const resMov = await axios.get<Movimiento[]>(`${apiUrl}/caja/movimientos`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      // Filtramos en el front los movimientos del día seleccionado
+      const movimientosDelDia = resMov.data.filter((mov) => mov.fecha.startsWith(fecha));
+      setMovimientos(movimientosDelDia);
+      setError(null);
+    } catch (err: any) {
+      setError("Error al obtener los datos de la caja.");
     } finally {
-      setEliminando(false);
-      setMovimientoAEliminar(null);
+      setLoading(false);
     }
-  };
-
-  const handleCancelDelete = () => {
-    setConfirmOpen(false);
-    setMovimientoAEliminar(null);
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
   };
 
   useEffect(() => {
-    const verificarAdminYObtenerDatos = async () => {
+    const verificarAuth = async () => {
       const token = localStorage.getItem("token");
       if (!token) {
         setIsAdmin(false);
         setLoading(false);
         return;
       }
-
       try {
         const decoded = jwtDecode<DecodedToken>(token);
         setIsAdmin(decoded.admin);
         setUserId(decoded.id || null);
-        if (!decoded.admin && tipo !== "diaria") {
-          setTipo("diaria");
-        }
-        await obtenerCaja();
-        await obtenerMovimientos();
-        await obtenerBalance();
-        setError(null);
+        await cargarDatos();
       } catch (err) {
-        setIsAdmin(false);
-        setError("Error validando token");
-      } finally {
+        setError("Error validando sesión");
         setLoading(false);
       }
     };
+    verificarAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fecha, metodoPago]);
 
-    verificarAdminYObtenerDatos();
-  }, [tipo]);
+  const agregarMovimiento = async () => {
+    if (!montoMovimiento || Number(montoMovimiento) <= 0) {
+      return setSnackbar({ open: true, message: "El monto debe ser mayor a 0", severity: "error" });
+    }
+    if (!descripcionMovimiento.trim()) {
+      return setSnackbar({ open: true, message: "Añade una descripción", severity: "error" });
+    }
 
-  if (loading) {
+    setEnviandoMovimiento(true);
+    const token = localStorage.getItem("token");
+
+    try {
+      await axios.post(
+        `${apiUrl}/caja/movimientos`,
+        {
+          tipoMovimiento,
+          monto: Number(montoMovimiento),
+          metodoPago: metodoPagoMovimiento,
+          descripcion: descripcionMovimiento,
+          usuarioId: userId,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSnackbar({ open: true, message: "Movimiento registrado", severity: "success" });
+      setMontoMovimiento("");
+      setDescripcionMovimiento("");
+      await cargarDatos();
+    } catch (error) {
+      setSnackbar({ open: true, message: "Error al registrar movimiento", severity: "error" });
+    } finally {
+      setEnviandoMovimiento(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (movimientoAEliminar === null) return;
+    setEliminando(true);
+    const token = localStorage.getItem("token");
+
+    try {
+      await axios.delete(`${apiUrl}/caja/movimientos/${movimientoAEliminar}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSnackbar({ open: true, message: "Eliminado", severity: "success" });
+      await cargarDatos();
+    } catch (err) {
+      setSnackbar({ open: true, message: "Error al eliminar", severity: "error" });
+    } finally {
+      setEliminando(false);
+      setConfirmOpen(false);
+    }
+  };
+
+  if (loading && !cajaData) {
     return (
-      <Box textAlign="center" mt={6}>
+      <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
         <CircularProgress />
       </Box>
     );
   }
 
-  if (!isAdmin && tipo !== "diaria") {
-    return (
-      <Typography color="error" align="center" sx={{ mt: 6 }}>
-        Acceso denegado a caja mensual.
-      </Typography>
-    );
-  }
-
-return (
-  <>
-    <Paper
-      elevation={3}
-      sx={{
-        p: 4,
-        maxWidth: 700,
-        mx: "auto",
-        mt: 5,
-        borderRadius: 3,
-        fontFamily: "'Roboto', sans-serif",
-        backgroundColor: "#f9f9f9",
-      }}
-    >
-      {/* Título principal */}
-      <Typography
-        variant="h5"
-        gutterBottom
-        align="center"
-        sx={{ color: "#1565c0", fontWeight: "bold", mb: 3 }}
-      >
-        Caja {tipo === "diaria" ? "Diaria" : "Mensual"}
-      </Typography>
-
-      {/* Error general */}
-      {error && (
-        <Typography color="error" variant="body2" align="center" sx={{ mb: 2 }}>
-          {error}
+  return (
+    <Box sx={{ maxWidth: 1000, mx: "auto", mt: 4, p: 2, fontFamily: "'Roboto', sans-serif" }}>
+      
+      {/* Controles Superiores */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4} flexWrap="wrap" gap={2}>
+        <Typography variant="h4" fontWeight="bold" sx={{ color: "#1565c0" }}>
+          Caja Diaria
         </Typography>
-      )}
-
-      {/* Filtros */}
-      <Box display="flex" gap={2} mt={2}>
-        <FormControl fullWidth disabled={!isAdmin}>
-          <InputLabel>Tipo</InputLabel>
-          <Select value={tipo} label="Tipo" onChange={(e) => setTipo(e.target.value as any)}>
-            <MenuItem value="diaria">Diaria</MenuItem>
-            <MenuItem value="mensual">Mensual</MenuItem>
-          </Select>
-        </FormControl>
-
-        <FormControl fullWidth>
-          <InputLabel>Método de Pago</InputLabel>
-          <Select
-            value={metodoPago}
-            label="Método de Pago"
-            onChange={(e) => setMetodoPago(e.target.value as any)}
-          >
-            <MenuItem value="Todos">Todos</MenuItem>
-            <MenuItem value="Efectivo">Efectivo</MenuItem>
-            <MenuItem value="Transferencia">Transferencia</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
-
-      {/* Totales */}
-      <Box mt={4} textAlign="center">
-        <Typography variant="h6">
-          Total generado (ARS): <strong>${total.toFixed(2)}</strong>
-        </Typography>
-
-        {isAdmin && (
-          <>
-            <Typography variant="body1" sx={{ mt: 1 }}>
-              Celulares: <strong>${celularesData.total.toFixed(2)}</strong> ({celularesData.cantidad} ventas)
-            </Typography>
-            <Typography variant="body1">
-              Accesorios: <strong>${accesoriosData.total.toFixed(2)}</strong> ({accesoriosData.cantidad} ventas)
-            </Typography>
-
-            <Typography variant="h6" sx={{ mt: 2 }}>
-              Total neto (ARS): <strong>${totalNeto.toFixed(2)}</strong>
-            </Typography>
-
-            {totalEnPesos !== null && tasaCambio !== null && (
-              <Typography variant="body1" sx={{ color: "green", mt: 1 }}>
-                Total en USD: <strong>${totalEnPesos.toFixed(2)}</strong> <br />
-                <small>Tasa usada: {tasaCambio.toFixed(4)} USD / ARS</small>
-              </Typography>
-            )}
-
-            {errorConversion && (
-              <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-                {errorConversion}
-              </Typography>
-            )}
-
-            <Typography variant="subtitle1" sx={{ mt: 1 }}>
-              Ventas realizadas: {cantidad}
-            </Typography>
-            
-            <Typography variant="h6" sx={{ mt: 2 }}>
-              Balance actual: <strong>${balance.toFixed(2)}</strong> ARS
-            </Typography>
-          </>
-        )}
-      </Box>
-
-
-      {/* Botones principales */}
-      <Box display="flex" justifyContent="center" gap={2} mt={3} flexWrap="wrap">
-        <Button variant="contained" color="primary" onClick={obtenerCaja}>
-          Actualizar caja
-        </Button>
-        {isAdmin && (
-          <Button variant="outlined" color="secondary" onClick={consultarDolar} disabled={convirtiendo}>
-            {convirtiendo ? "Consultando..." : "Consultar precio en pesos"}
+        <Box display="flex" gap={2}>
+          <TextField
+            type="date"
+            label="Día a consultar"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            size="small"
+          />
+          <Button variant="outlined" onClick={() => navigate("/home")}>
+            Volver
           </Button>
-        )}
+        </Box>
       </Box>
 
-      {/* Botón: Volver al Home */}
-      <Box textAlign="center" mt={3}>
-        <Button variant="outlined" fullWidth color="secondary" sx={{ mt: 2 }} onClick={() => navigate("/home")}>
-          ← Volver al Inicio
-        </Button>
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+
+      {/* Contenedor Principal (Reemplaza a Grid) */}
+      <Box 
+        display="flex" 
+        flexDirection={{ xs: "column", md: "row" }} 
+        gap={3} 
+        mb={3}
+      >
+        {/* COLUMNA IZQUIERDA: Totales (Cambia según rol) */}
+        <Box flex={{ xs: "1 1 auto", md: "0 0 40%" }}>
+          <Card elevation={3} sx={{ borderRadius: 3, backgroundColor: isAdmin ? "#f8f9fa" : "#e3f2fd", height: "100%" }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom color="textSecondary">
+                Resumen de Ingresos
+              </Typography>
+              
+              <Typography variant="h3" fontWeight="bold" sx={{ color: "#2e7d32" }}>
+                ${cajaData?.total.toFixed(2) || "0.00"}
+              </Typography>
+              <Typography variant="body2" color="textSecondary" mb={2}>
+                Total Generado por Ventas ({cajaData?.cantidad || 0} artículos)
+              </Typography>
+
+              {isAdmin && (
+                <>
+                  <Divider sx={{ my: 2 }} />
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography variant="body1">Celulares:</Typography>
+                    <Typography fontWeight="bold">${cajaData?.celulares?.total.toFixed(2) || "0.00"}</Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography variant="body1">Accesorios:</Typography>
+                    <Typography fontWeight="bold">${cajaData?.accesorios?.total.toFixed(2) || "0.00"}</Typography>
+                  </Box>
+                  <Divider sx={{ my: 2 }} />
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography variant="body1">Efectivo Físico (Neto):</Typography>
+                    <Typography fontWeight="bold" sx={{ color: "#1565c0" }}>
+                      ${cajaData?.totalNeto.toFixed(2) || "0.00"}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography variant="body1">Ganancia Real:</Typography>
+                    <Typography fontWeight="bold" sx={{ color: "#d81b60" }}>
+                      ${cajaData?.ganancia?.toFixed(2) || "0.00"}
+                    </Typography>
+                  </Box>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+
+        {/* COLUMNA DERECHA: Agregar Movimientos (Para todos los usuarios) */}
+        <Box flex={{ xs: "1 1 auto", md: "1 1 auto" }}>
+          <Card elevation={3} sx={{ borderRadius: 3, height: "100%" }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Registrar Movimiento
+              </Typography>
+              
+              <Box display="grid" gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }} gap={2} mb={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Tipo</InputLabel>
+                  <Select value={tipoMovimiento} label="Tipo" onChange={(e) => setTipoMovimiento(e.target.value as any)}>
+                    <MenuItem value="ingreso">Fondo Inicial / Ingreso</MenuItem>
+                    <MenuItem value="gasto">Gasto (Insumos, etc)</MenuItem>
+                    {isAdmin && <MenuItem value="retiro">Retiro de Ganancia</MenuItem>}
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  label="Monto"
+                  type="number"
+                  fullWidth
+                  size="small"
+                  value={montoMovimiento}
+                  onChange={(e) => setMontoMovimiento(e.target.value ? Number(e.target.value) : "")}
+                />
+              </Box>
+
+              <TextField
+                label="Descripción"
+                fullWidth
+                size="small"
+                sx={{ mb: 2 }}
+                value={descripcionMovimiento}
+                onChange={(e) => setDescripcionMovimiento(e.target.value)}
+              />
+              
+              <Button variant="contained" color="primary" fullWidth onClick={agregarMovimiento} disabled={enviandoMovimiento}>
+                {enviandoMovimiento ? "Guardando..." : "Guardar Movimiento"}
+              </Button>
+            </CardContent>
+          </Card>
+        </Box>
       </Box>
 
-      {isAdmin && (
-        <>
-          {/* Formulario para registrar gasto/retiro */}
-          <Paper elevation={2} sx={{ mt: 5, p: 3, maxWidth: 600, mx: "auto", borderRadius: 2, backgroundColor: "#fff" }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Registrar gasto o retiro
+      {/* TABLA DE MOVIMIENTOS */}
+      <Box>
+        <Card elevation={3} sx={{ borderRadius: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Movimientos del Día
             </Typography>
-
-            {movimientoError && <Alert severity="error" sx={{ mb: 2 }}>{movimientoError}</Alert>}
-            {movimientoSuccess && <Alert severity="success" sx={{ mb: 2 }}>{movimientoSuccess}</Alert>}
-
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>Tipo de movimiento</InputLabel>
-              <Select value={tipoMovimiento} label="Tipo de movimiento" onChange={(e) => setTipoMovimiento(e.target.value as any)}>
-                <MenuItem value="gasto">Gasto</MenuItem>
-                <MenuItem value="retiro">Retiro</MenuItem>
-              </Select>
-            </FormControl>
-
-            <TextField
-              label="Monto"
-              type="number"
-              fullWidth
-              value={montoMovimiento}
-              onChange={(e) => setMontoMovimiento(Number(e.target.value))}
-              inputProps={{ min: 0, step: "0.01" }}
-              sx={{ mb: 2 }}
-            />
-
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>Método de pago</InputLabel>
-              <Select
-                value={metodoPagoMovimiento}
-                label="Método de pago"
-                onChange={(e) => setMetodoPagoMovimiento(e.target.value as any)}
-              >
-                <MenuItem value="Efectivo">Efectivo</MenuItem>
-                <MenuItem value="Transferencia">Transferencia</MenuItem>
-              </Select>
-            </FormControl>
-
-            <TextField
-              label="Descripción"
-              multiline
-              rows={3}
-              fullWidth
-              value={descripcionMovimiento}
-              onChange={(e) => setDescripcionMovimiento(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-
-            <Button
-              variant="contained"
-              color="success"
-              fullWidth
-              onClick={agregarMovimiento}
-              disabled={enviandoMovimiento}
-            >
-              {enviandoMovimiento ? "Guardando..." : "Agregar movimiento"}
-            </Button>
-          </Paper>
-
-          {/* Lista de movimientos */}
-          <Box mt={5} maxHeight={300} overflow="auto" sx={{ maxWidth: 700, mx: "auto" }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Movimientos recientes
-            </Typography>
-
             {movimientos.length === 0 ? (
-              <Typography>No hay movimientos registrados</Typography>
+              <Typography color="textSecondary">No hay movimientos registrados hoy.</Typography>
             ) : (
-              <Table size="small" stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Fecha</TableCell>
-                    <TableCell>Tipo</TableCell>
-                    <TableCell>Monto (USD)</TableCell>
-                    <TableCell>Método de Pago</TableCell>
-                    <TableCell>Descripción</TableCell>
-                    <TableCell>Acciones</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {movimientos.map((mov) => (
-                    <TableRow key={mov.id}>
-                      <TableCell>{new Date(mov.fecha).toLocaleString()}</TableCell>
-                      <TableCell
-                        sx={{
-                          color: mov.tipoMovimiento === "gasto" ? "red" : "orange",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {mov.tipoMovimiento.toUpperCase()}
-                      </TableCell>
-                      <TableCell>${mov.monto.toFixed(2)}</TableCell>
-                      <TableCell>{mov.metodoPago}</TableCell>
-                      <TableCell>{mov.descripcion}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          size="small"
-                          onClick={() => handleEliminarClick(mov.id)}
-                          disabled={eliminando && movimientoAEliminar === mov.id}
-                        >
-                          {eliminando && movimientoAEliminar === mov.id ? (
-                            <CircularProgress size={20} />
-                          ) : (
-                            "Eliminar"
-                          )}
-                        </Button>
-                      </TableCell>
+              <Box overflow="auto">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Hora</TableCell>
+                      <TableCell>Tipo</TableCell>
+                      <TableCell>Descripción</TableCell>
+                      <TableCell align="right">Monto</TableCell>
+                      {isAdmin && <TableCell align="center">Acciones</TableCell>}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {movimientos.map((mov) => (
+                      <TableRow key={mov.id}>
+                        <TableCell>{new Date(mov.fecha).toLocaleTimeString()}</TableCell>
+                        <TableCell sx={{
+                          color: mov.tipoMovimiento === "ingreso" ? "green" : mov.tipoMovimiento === "gasto" ? "red" : "orange",
+                          fontWeight: "bold", textTransform: "uppercase"
+                        }}>
+                          {mov.tipoMovimiento}
+                        </TableCell>
+                        <TableCell>{mov.descripcion}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: "bold" }}>
+                          ${Number(mov.monto).toFixed(2)}
+                        </TableCell>
+                        {isAdmin && (
+                          <TableCell align="center">
+                            <Button color="error" size="small" onClick={() => { setMovimientoAEliminar(mov.id); setConfirmOpen(true); }}>
+                              Borrar
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
             )}
-          </Box>
+          </CardContent>
+        </Card>
+      </Box>
 
-          {/* Confirmación de eliminación */}
-          <Dialog open={confirmOpen} onClose={handleCancelDelete}>
-            <DialogTitle>Confirmar eliminación</DialogTitle>
-            <DialogContent>
-              <DialogContentText>
-                ¿Estás seguro que deseas eliminar este movimiento? Esta acción no se puede deshacer.
-              </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCancelDelete} color="primary">
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleConfirmDelete}
-                color="error"
-                variant="contained"
-                autoFocus
-                disabled={eliminando}
-              >
-                {eliminando ? <CircularProgress size={20} /> : "Eliminar"}
-              </Button>
-            </DialogActions>
-          </Dialog>
+      {/* Dialogos y Snackbars */}
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogContent>
+          <DialogContentText>¿Seguro que deseas eliminar este movimiento?</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancelar</Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained" disabled={eliminando}>
+            {eliminando ? "Borrando..." : "Eliminar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-          {/* Snackbar */}
-          <Snackbar
-            open={snackbar.open}
-            autoHideDuration={4000}
-            onClose={handleCloseSnackbar}
-            anchorOrigin={{ vertical: "top", horizontal: "center" }}
-          >
-            <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
-              {snackbar.message}
-            </Alert>
-          </Snackbar>
-        </>
-      )}
-    </Paper>
-  </>
- );
+      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+        <Alert severity={snackbar.severity} sx={{ width: "100%" }}>{snackbar.message}</Alert>
+      </Snackbar>
+    </Box>
+  );
 };
 
-export default Caja; 
+export default Caja;
