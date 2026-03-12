@@ -45,18 +45,21 @@ export const cajaController = {
         whereBase['metodoPago'] = metodoPago;
       }
 
-      // 2. TRAER VENTAS CON SUS RELACIONES (Para calcular costos)
+      // 2. TRAER VENTAS CON SUS RELACIONES (Para calcular costos y ver detalle en UI)
       const ventas = await Venta.findAll({ 
         where: whereBase,
         include: [
-          { model: Celular, attributes: ['costo'] },
+          // ACÁ: Agregamos 'modelo'
+          { model: Celular, attributes: ['modelo', 'costo'] },
           { 
             model: Accesorios, 
             as: 'accesorios', 
-            attributes: ['precio_costo'],
+            // ACÁ: Agregamos 'nombre'
+            attributes: ['nombre', 'precio_costo'],
             through: { attributes: ["cantidad"] } 
           }
-        ]
+        ],
+        order: [['fecha', 'DESC']] // Para que las ventas más recientes salgan arriba
       });
 
       let totalGeneral = 0;
@@ -138,8 +141,9 @@ export const cajaController = {
         metodoPago: metodoPago || 'Todos',
         totalNeto,
         balance,
-        ganancia, // Nuevo campo enviado al front
+        ganancia, 
         movimientos,
+        ventas, // ACÁ: Mandamos el array de ventas al frontend
         celulares: {
           total: totalCelulares,
           cantidad: cantidadCelulares,
