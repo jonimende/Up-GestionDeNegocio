@@ -34,7 +34,6 @@ interface DecodedToken {
   id: number;
 }
 
-// Interfaces para tipar las ventas
 interface VentaAccesorioDetalle {
   nombre: string;
   VentaAccesorio: { cantidad: number };
@@ -56,7 +55,7 @@ interface ResCaja {
   totalNeto: number;
   balance: number;
   ganancia?: number;
-  ventas: VentaDetalle[]; // Recibimos las ventas detalladas
+  ventas: VentaDetalle[];
   celulares?: { total: number; cantidad: number };
   accesorios?: { total: number; cantidad: number };
 }
@@ -74,29 +73,24 @@ interface Movimiento {
 const Caja = () => {
   const navigate = useNavigate();
 
-  // Estados de fecha y filtros
   const hoy = new Date().toISOString().split("T")[0];
   const [fecha, setFecha] = useState<string>(hoy);
   const [metodoPago, setMetodoPago] = useState<"Efectivo" | "Transferencia" | "Todos">("Todos");
 
-  // Estados de datos
   const [cajaData, setCajaData] = useState<ResCaja | null>(null);
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Estados de formulario de movimientos
   const [tipoMovimiento, setTipoMovimiento] = useState<"gasto" | "retiro" | "ingreso">("gasto");
   const [montoMovimiento, setMontoMovimiento] = useState<number | "">("");
   const [metodoPagoMovimiento, setMetodoPagoMovimiento] = useState<"Efectivo" | "Transferencia">("Efectivo");
   const [descripcionMovimiento, setDescripcionMovimiento] = useState<string>("");
   const [enviandoMovimiento, setEnviandoMovimiento] = useState(false);
 
-  // Autenticación
   const [isAdmin, setIsAdmin] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
 
-  // UI States (Snackbar y Dialogos)
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [movimientoAEliminar, setMovimientoAEliminar] = useState<number | null>(null);
   const [eliminando, setEliminando] = useState(false);
@@ -176,6 +170,7 @@ const Caja = () => {
           metodoPago: metodoPagoMovimiento,
           descripcion: descripcionMovimiento,
           usuarioId: userId,
+          fecha: fecha, // <-- SOLUCIÓN 1: Le enviamos la fecha seleccionada al backend
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -209,6 +204,16 @@ const Caja = () => {
     }
   };
 
+  // --- SOLUCIÓN 2: Cálculos para mostrar el total real en la interfaz ---
+  const totalMovimientos = movimientos.reduce((acc, mov) => {
+    if (mov.tipoMovimiento === "ingreso") return acc + Number(mov.monto);
+    if (mov.tipoMovimiento === "gasto" || mov.tipoMovimiento === "retiro") return acc - Number(mov.monto);
+    return acc;
+  }, 0);
+
+  const totalFinalCaja = (cajaData?.total || 0) + totalMovimientos;
+  // ----------------------------------------------------------------------
+
   if (loading && !cajaData) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
@@ -220,7 +225,6 @@ const Caja = () => {
   return (
     <Box sx={{ maxWidth: 1000, mx: "auto", mt: 4, p: 2, fontFamily: "'Roboto', sans-serif" }}>
       
-      {/* Controles Superiores */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4} flexWrap="wrap" gap={2}>
         <Typography variant="h4" fontWeight="bold" sx={{ color: "#1565c0" }}>
           Caja Diaria
@@ -242,23 +246,37 @@ const Caja = () => {
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-      {/* Contenedor Principal de Totales y Formulario */}
       <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={3} mb={3}>
         
-        {/* COLUMNA IZQUIERDA: Totales */}
+        {/* COLUMNA IZQUIERDA: Totales Actualizados */}
         <Box flex={{ xs: "1 1 auto", md: "0 0 40%" }}>
           <Card elevation={3} sx={{ borderRadius: 3, backgroundColor: isAdmin ? "#f8f9fa" : "#e3f2fd", height: "100%" }}>
             <CardContent>
               <Typography variant="h6" gutterBottom color="textSecondary">
-                Resumen de Ingresos
+                Balance Final de Caja
               </Typography>
               
-              <Typography variant="h3" fontWeight="bold" sx={{ color: "#2e7d32" }}>
-                ${cajaData?.total.toFixed(2) || "0.00"}
+              {/* Nuevo número gigante que refleja VENTAS + MOVIMIENTOS */}
+              <Typography variant="h3" fontWeight="bold" sx={{ color: totalFinalCaja >= 0 ? "#2e7d32" : "#d32f2f" }}>
+                ${totalFinalCaja.toFixed(2)}
               </Typography>
               <Typography variant="body2" color="textSecondary" mb={2}>
-                Total Generado por Ventas ({cajaData?.cantidad || 0} artículos)
+                Total en caja (Ventas {totalMovimientos < 0 ? "-" : "+"} Movimientos)
               </Typography>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Desglose visual para el usuario */}
+              <Box display="flex" justifyContent="space-between" mb={1}>
+                <Typography variant="body2">Total Ventas ({cajaData?.cantidad || 0} art):</Typography>
+                <Typography fontWeight="bold">${cajaData?.total.toFixed(2) || "0.00"}</Typography>
+              </Box>
+              <Box display="flex" justifyContent="space-between" mb={1}>
+                <Typography variant="body2">Impacto Movimientos:</Typography>
+                <Typography fontWeight="bold" sx={{ color: totalMovimientos >= 0 ? "#2e7d32" : "#d32f2f" }}>
+                  {totalMovimientos >= 0 ? "+" : ""}${totalMovimientos.toFixed(2)}
+                </Typography>
+              </Box>
 
               {isAdmin && (
                 <>
@@ -357,7 +375,6 @@ const Caja = () => {
                   </TableHead>
                   <TableBody>
                     {cajaData.ventas.map((venta) => {
-                      // Construir la descripción de lo vendido
                       let descripcion = "";
                       if (venta.Celular) {
                         descripcion += `Celular: ${venta.Celular.modelo}`;
