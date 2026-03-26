@@ -55,7 +55,7 @@ interface Venta {
     id: number;
     nombre: string;
     precio?: number;
-    precio_costo?: number; // ACÁ: Agregamos precio_costo
+    precio_costo?: number; 
     VentaAccesorio?: { cantidad: number };
   }[];
 
@@ -120,7 +120,6 @@ const AdminVentas: React.FC = () => {
       }
 
       try {
-        // 1. Decodificamos el token para saber si es admin (solo para la UI)
         const decoded = jwtDecode<DecodedToken>(token);
         setIsAdmin(decoded.admin);
 
@@ -139,7 +138,6 @@ const AdminVentas: React.FC = () => {
         setProveedores(proveedoresRes.data);
       } catch (error) {
         console.error("Error cargando datos:", error);
-        // Si el token es inválido o expiró, lo tratamos como no-admin
         setIsAdmin(false);
       } finally {
         setLoading(false);
@@ -149,16 +147,6 @@ const AdminVentas: React.FC = () => {
     setLoading(true);
     fetchData();
   }, []);
-
-  /*if (!isAdmin) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Typography variant="h6" color="error">
-          Acceso denegado
-        </Typography>
-      </Box>
-    );
-  }*/
 
   const validarFormulario = (): string | null => {
     if (!form.fecha) return "La fecha es obligatoria";
@@ -218,6 +206,8 @@ const AdminVentas: React.FC = () => {
 
   const handleEditClick = (venta: Venta) => {
     setEditandoId(venta.id);
+    setExpandedVentaId(venta.id); // ACÁ ESTÁ EL ARREGLO: Esto expande el acordeón automáticamente
+    
     setForm({
       ...venta,
       fecha: venta.fecha.slice(0, 10),
@@ -314,7 +304,7 @@ const AdminVentas: React.FC = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // 2. Reconstruimos el estado visual de React CORRECTAMENTE
+      // 2. Reconstruimos el estado visual de React CORRECTAMENTE (Arreglado)
       setVentas((prev) =>
         prev.map((v) => {
           if (v.id === editandoId) {
@@ -372,7 +362,6 @@ const AdminVentas: React.FC = () => {
     padding: "6px 8px",
   };
 
-  // ======== RETURN ========
   if (loading) return <Typography sx={{ p: 2 }}>Cargando...</Typography>;
 
   return (
@@ -425,7 +414,6 @@ const AdminVentas: React.FC = () => {
 
             return (
               <React.Fragment key={venta.id}>
-                {/* Fila principal */}
                 <TableRow
                   hover
                   sx={{ cursor: "pointer" }}
@@ -463,13 +451,11 @@ const AdminVentas: React.FC = () => {
                   </TableCell>
                 </TableRow>
 
-                {/* Fila expandible */}
                 <TableRow>
-                  <TableCell colSpan={4} sx={{ p: 0, borderBottom: "unset" }}>
+                  <TableCell colSpan={5} sx={{ p: 0, borderBottom: "unset" }}>
                     <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                       <Box sx={{ m: 2 }}>
                         {isEditing ? (
-                          // FORMULARIO DE EDICIÓN COMPLETO
                           <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
                             <TextField
                               name="fecha"
@@ -495,20 +481,22 @@ const AdminVentas: React.FC = () => {
                               onChange={handleInputChange}
                               label="Total"
                             />
-                            <Select
-                              name="metodoPago"
-                              size="small"
-                              value={form.metodoPago || ""}
-                              onChange={handleInputChange}
-                              displayEmpty
-                            >
-                              <MenuItem value="">
-                                <em>Seleccionar método</em>
-                              </MenuItem>
-                              {METODOS_PAGO.map((m) => (
-                                <MenuItem key={m} value={m}>{m}</MenuItem>
-                              ))}
-                            </Select>
+                            <FormControl size="small">
+                              <InputLabel>Método</InputLabel>
+                              <Select
+                                name="metodoPago"
+                                value={form.metodoPago || ""}
+                                onChange={handleInputChange}
+                                label="Método"
+                              >
+                                <MenuItem value="">
+                                  <em>Seleccionar método</em>
+                                </MenuItem>
+                                {METODOS_PAGO.map((m) => (
+                                  <MenuItem key={m} value={m}>{m}</MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
                             <TextField
                               name="comprador"
                               size="small"
@@ -573,6 +561,7 @@ const AdminVentas: React.FC = () => {
                               value={form.fechaIngreso || ""}
                               onChange={handleInputChange}
                               label="Fecha Ingreso"
+                              InputLabelProps={{ shrink: true }}
                             />
                             <TextField
                               name="accesorios"
@@ -595,7 +584,7 @@ const AdminVentas: React.FC = () => {
                               onChange={handleInputChange}
                               label="Reparado Por"
                             />
-                            <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                            <Box sx={{ display: "flex", gap: 1, mt: 1, alignItems: "center" }}>
                               <Button
                                 variant="contained"
                                 color="primary"
@@ -617,7 +606,6 @@ const AdminVentas: React.FC = () => {
                             </Box>
                           </Box>
                         ) : (
-                          // DETALLES EXPANDIBLES
                           <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
                             <Typography>Producto: {getProducto(venta)}</Typography>
                             <Typography>Proveedor: {venta.Proveedor?.nombre || "-"}</Typography>
@@ -629,9 +617,8 @@ const AdminVentas: React.FC = () => {
                             <Typography>Observaciones: {venta.Celular?.observaciones || "-"}</Typography>
                             <Typography>IMEI: {venta.Celular?.imei || "-"}</Typography>
                             <Typography>Fecha Ingreso: {venta.Celular?.fechaIngreso ? new Date(venta.Celular.fechaIngreso).toLocaleDateString() : "-"}</Typography>
-                            {/* ACÁ: Modificamos cómo se muestran los accesorios para incluir el costo */}
                             <Typography>Accesorios: {venta.accesorios && venta.accesorios.length > 0 
-                                ? venta.accesorios.map(a => `${a.nombre} x${(a as any).VentaAccesorio.cantidad} (Costo: $${a.precio_costo ?? 0})`).join(", ") 
+                                ? venta.accesorios.map(a => `${a.nombre} x${(a as any).VentaAccesorio?.cantidad ?? 1} (Costo: $${a.precio_costo ?? 0})`).join(", ") 
                                 : "-"}
                             </Typography>
                             <Typography>Descripción Reparación: {venta.Reparacion?.descripcion || "-"}</Typography>
