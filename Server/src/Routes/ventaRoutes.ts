@@ -8,7 +8,7 @@ import { isAdmin } from "../Middlewares/isAdmin";
 const router = Router();
 
 // Obtener todas las ventas (incluyendo celulares, accesorios y reparaciones)
-router.get('/', authenticateToken, isAdmin, async (req, res, next) => {
+router.get('/', authenticateToken, async (req, res, next) => {
   await ventasController.getVentas(req, res, next);
 });
 
@@ -18,7 +18,7 @@ router.get('/caja/consulta', authenticateToken, async (req, res) => {
 });
 
 // Obtener una venta por ID (solo admin) - esta ruta va al final
-router.get('/:id', authenticateToken, isAdmin, async (req, res, next) => {
+router.get('/:id', authenticateToken, async (req, res, next) => {
   await ventasController.getVentaById(req, res, next);
 });
 
@@ -30,11 +30,11 @@ router.post('/admin', authenticateToken, isAdmin, async (req, res, next) => {
   await ventasController.createVentaAdmin(req, res, next);
 });
 
-router.put('/:id', authenticateToken, isAdmin, async (req, res, next) => {
+router.put('/:id', authenticateToken, async (req, res, next) => {
   await ventasController.updateVenta(req, res, next);
 });
 
-router.delete('/:id', authenticateToken, isAdmin, async (req, res, next) => {
+router.delete('/:id', authenticateToken, async (req, res, next) => {
   await ventasController.deleteVenta(req, res, next);
 });
 

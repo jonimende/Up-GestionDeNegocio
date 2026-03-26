@@ -148,7 +148,7 @@ const AdminVentas: React.FC = () => {
     fetchData();
   }, []);
 
-  if (!isAdmin) {
+  /*if (!isAdmin) {
     return (
       <Box sx={{ p: 2 }}>
         <Typography variant="h6" color="error">
@@ -156,7 +156,7 @@ const AdminVentas: React.FC = () => {
         </Typography>
       </Box>
     );
-  }
+  }*/
 
   const validarFormulario = (): string | null => {
     if (!form.fecha) return "La fecha es obligatoria";

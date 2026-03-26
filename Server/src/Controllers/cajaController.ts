@@ -161,7 +161,7 @@ export const cajaController = {
 
   agregarMovimiento: async function (req: Request, res: Response) {
     try {
-      const { tipoMovimiento, monto, metodoPago, descripcion, usuarioId } = req.body;
+      const { tipoMovimiento, monto, metodoPago, descripcion, usuarioId, fecha } = req.body;
 
       // Agregamos "ingreso" a los tipos válidos
       if (!['gasto', 'retiro', 'ingreso'].includes(tipoMovimiento)) {
@@ -180,7 +180,7 @@ export const cajaController = {
         metodoPago,
         descripcion,
         usuarioId,
-        fecha: new Date(),
+        fecha: fecha ? new Date(fecha) : new Date(),
       });
 
       res.status(201).json(nuevoMovimiento);
