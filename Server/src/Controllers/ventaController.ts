@@ -203,12 +203,20 @@ export const ventasController = {
     try {
       const { id } = req.params;
       const venta = await Venta.findByPk(id, { transaction: t });
+      
       if (!venta) {
+        await t.rollback();
         return res.status(404).json({ error: 'Venta no encontrada' });
       }
 
-      const { cantidad, total, fecha, celularId, reparacionId, metodoPago, descuento, accesorios } = req.body;
+      // 1. Extraemos TODOS los campos que manda el frontend, incluidos los del celular y reparación
+      const { 
+        cantidad, total, fecha, celularId, reparacionId, metodoPago, descuento, accesorios,
+        modelo, almacenamiento, bateria, color, precio, observaciones, imei, fechaIngreso,
+        reparacionDescripcion, reparadoPor 
+      } = req.body;
 
+      // 2. Actualizamos la Venta principal
       await venta.update({
         ...(cantidad !== undefined && { cantidad }),
         ...(total !== undefined && { total }),
@@ -219,6 +227,35 @@ export const ventasController = {
         ...(descuento !== undefined && { descuento }),
       }, { transaction: t });
 
+      // 3. NUEVO: Si la venta tiene un celular, actualizamos los datos de ese celular en su tabla
+      if (venta.celularId) {
+        const celular = await Celular.findByPk(venta.celularId, { transaction: t });
+        if (celular) {
+          await celular.update({
+            ...(modelo !== undefined && { modelo }),
+            ...(almacenamiento !== undefined && { almacenamiento }),
+            ...(bateria !== undefined && { bateria }),
+            ...(color !== undefined && { color }),
+            ...(precio !== undefined && { precio }),
+            ...(observaciones !== undefined && { observaciones }),
+            ...(imei !== undefined && { imei }),
+            ...(fechaIngreso !== undefined && { fechaIngreso }),
+          }, { transaction: t });
+        }
+      }
+
+      // 4. NUEVO: Si la venta tiene una reparación, actualizamos sus datos
+      if (venta.reparacionId) {
+        const reparacion = await Reparacion.findByPk(venta.reparacionId, { transaction: t });
+        if (reparacion) {
+          await reparacion.update({
+            ...(reparacionDescripcion !== undefined && { descripcion: reparacionDescripcion }),
+            ...(reparadoPor !== undefined && { reparadoPor }),
+          }, { transaction: t });
+        }
+      }
+
+      // 5. Actualizamos los accesorios si vienen como array válido
       if (Array.isArray(accesorios)) {
         await VentaAccesorio.destroy({ where: { ventaId: venta.id }, transaction: t });
         for (const { id: accesorioId, cantidad } of accesorios) {
@@ -243,10 +280,25 @@ export const ventasController = {
         include: [{ model: Accesorios, as: "accesorios", through:  { attributes: ["cantidad"] } }],
         transaction: t,
       });
+      
       if (!venta) {
+        await t.rollback();
         return res.status(404).json({ error: 'Venta no encontrada' });
       }
 
+      // 1. Restaurar stock de Celular (ESTO FALTABA)
+      if (venta.celularId) {
+        const celular = await Celular.findByPk(venta.celularId, { transaction: t, lock: t.LOCK.UPDATE });
+        if (celular) {
+          celular.stock += Number(venta.cantidad) || 1; // Devolvemos la cantidad vendida al stock
+          celular.vendido = false; // Ya no está vendido
+          celular.comprador = null; // Borramos el comprador
+          celular.fechaVenta = null; // Borramos la fecha de venta
+          await celular.save({ transaction: t });
+        }
+      }
+
+      // 2. Restaurar stock de Accesorios
       if (venta.accesorios && venta.accesorios.length > 0) {
         for (const accesorio of venta.accesorios) {
           const cantidad = (accesorio as any).VentaAccesorio.cantidad;
@@ -260,6 +312,7 @@ export const ventasController = {
         await VentaAccesorio.destroy({ where: { ventaId: venta.id }, transaction: t });
       }
 
+      // 3. Eliminar la venta final
       await venta.destroy({ transaction: t });
       await t.commit();
       res.status(204).send();
