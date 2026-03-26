@@ -114,15 +114,15 @@ const AdminVentas: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem("token");
-      if (!token) return;
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
       try {
+        // 1. Decodificamos el token para saber si es admin (solo para la UI)
         const decoded = jwtDecode<DecodedToken>(token);
-        if (!decoded.admin) {
-          setIsAdmin(false);
-          return;
-        }
-        setIsAdmin(true);
+        setIsAdmin(decoded.admin);
 
         const [ventasRes, proveedoresRes] = await Promise.all([
           axios.get<Venta[]>(
@@ -134,10 +134,12 @@ const AdminVentas: React.FC = () => {
             { headers: { Authorization: `Bearer ${token}` } }
           ),
         ]);
+        
         setVentas(ventasRes.data);
         setProveedores(proveedoresRes.data);
       } catch (error) {
         console.error("Error cargando datos:", error);
+        // Si el token es inválido o expiró, lo tratamos como no-admin
         setIsAdmin(false);
       } finally {
         setLoading(false);
