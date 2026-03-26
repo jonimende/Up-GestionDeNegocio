@@ -302,36 +302,60 @@ const AdminVentas: React.FC = () => {
     }
     if (!editandoId) return;
     const token = localStorage.getItem("token") || "";
+    
     try {
       const dataToSend = { ...form };
       delete dataToSend.proveedorNombre;
 
+      // 1. Enviamos los datos al backend
       await axios.put(
         `https://up-gestiondenegocio-production.up.railway.app/ventas/${editandoId}`,
         dataToSend,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      // 2. Reconstruimos el estado visual de React CORRECTAMENTE
       setVentas((prev) =>
-        prev.map((v) =>
-          v.id === editandoId
-            ? {
-                ...v,
-                ...form,
-                Celular: {
-                  ...v.Celular,
-                  idProveedor: form.proveedorId ?? v.Celular?.idProveedor ?? null,
-                },
-                Proveedor: proveedores.find((p) => p.id === form.proveedorId) ?? undefined,
-              }
-            : v
-        )
+        prev.map((v) => {
+          if (v.id === editandoId) {
+            return {
+              ...v,
+              cantidad: form.cantidad ?? v.cantidad,
+              total: form.total ?? v.total,
+              fecha: form.fecha ?? v.fecha,
+              metodoPago: form.metodoPago ?? v.metodoPago,
+              comprador: form.comprador ?? v.comprador,
+              Celular: v.Celular ? {
+                ...v.Celular,
+                modelo: form.modelo ?? v.Celular.modelo,
+                almacenamiento: form.almacenamiento ?? v.Celular.almacenamiento,
+                bateria: form.bateria ?? v.Celular.bateria,
+                color: form.color ?? v.Celular.color,
+                precio: form.precio ?? v.Celular.precio,
+                observaciones: form.observaciones ?? v.Celular.observaciones,
+                imei: form.imei ?? v.Celular.imei,
+                idProveedor: form.proveedorId ?? v.Celular.idProveedor,
+              } : undefined,
+              Reparacion: v.Reparacion ? {
+                ...v.Reparacion,
+                descripcion: form.reparacionDescripcion ?? v.Reparacion.descripcion,
+                reparadoPor: form.reparadoPor ?? v.Reparacion.reparadoPor,
+              } : undefined,
+              Proveedor: form.proveedorId 
+                ? proveedores.find((p) => p.id === form.proveedorId) 
+                : v.Proveedor,
+            };
+          }
+          return v;
+        })
       );
+      
       setEditandoId(null);
       setForm({});
       setErrorValidacion(null);
     } catch (error) {
       console.error("Error al guardar venta:", error);
+      setErrorValidacion("Hubo un error al comunicarse con el servidor (Revisa la consola).");
     }
   };
 
