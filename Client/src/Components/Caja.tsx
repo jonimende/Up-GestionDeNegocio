@@ -79,6 +79,11 @@ const Caja = () => {
 
   const [cajaData, setCajaData] = useState<ResCaja | null>(null);
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
+  
+  // NUEVOS ESTADOS: Para manejar los datos globales (Acumulados)
+  const [movimientosGlobales, setMovimientosGlobales] = useState<Movimiento[]>([]);
+  const [ventasHistoricasTotal, setVentasHistoricasTotal] = useState<number>(0);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,18 +113,36 @@ const Caja = () => {
 
     setLoading(true);
     try {
+      // 1. Obtenemos las ventas DEL DÍA seleccionado (para la tabla y desglose diario)
       const resCaja = await axios.get<ResCaja>(`${apiUrl}/ventas/caja/consulta`, {
         params: { tipo: "diaria", metodoPago, fecha },
         headers: { Authorization: `Bearer ${token}` },
       });
       setCajaData(resCaja.data);
 
+      // 2. Obtenemos el histórico de ventas (Para el balance acumulado)
+      try {
+        const resCajaHist = await axios.get<ResCaja>(`${apiUrl}/ventas/caja/consulta`, {
+          params: { tipo: "historico", metodoPago: "Todos" }, // Asegúrate que tu backend lo soporte
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setVentasHistoricasTotal(resCajaHist.data.total || 0);
+      } catch (err) {
+        console.warn("No se pudo obtener el histórico de ventas. Revisa el endpoint.");
+      }
+
+      // 3. Obtenemos TODOS los movimientos
       const resMov = await axios.get<Movimiento[]>(`${apiUrl}/caja/movimientos`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
+      // Guardamos todos los movimientos para el balance general
+      setMovimientosGlobales(resMov.data);
+      
+      // Filtramos solo los del día para la tabla inferior
       const movimientosDelDia = resMov.data.filter((mov) => mov.fecha.startsWith(fecha));
       setMovimientos(movimientosDelDia);
+      
       setError(null);
     } catch (err: any) {
       setError("Error al obtener los datos de la caja.");
@@ -170,7 +193,8 @@ const Caja = () => {
           metodoPago: metodoPagoMovimiento,
           descripcion: descripcionMovimiento,
           usuarioId: userId,
-          fecha: fecha, // <-- SOLUCIÓN 1: Le enviamos la fecha seleccionada al backend
+          // Añadimos T12:00:00.000Z para forzar que el backend no cambie de día por zonas horarias
+          fecha: `${fecha}T12:00:00.000Z`, 
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -204,14 +228,23 @@ const Caja = () => {
     }
   };
 
-  // --- SOLUCIÓN 2: Cálculos para mostrar el total real en la interfaz ---
-  const totalMovimientos = movimientos.reduce((acc, mov) => {
+  // --- SOLUCIÓN: Cálculos Separados (Global vs Diario) ---
+  
+  // 1. Balance Acumulado (Histórico de toda la vida)
+  const totalMovimientosHistoricos = movimientosGlobales.reduce((acc, mov) => {
     if (mov.tipoMovimiento === "ingreso") return acc + Number(mov.monto);
     if (mov.tipoMovimiento === "gasto" || mov.tipoMovimiento === "retiro") return acc - Number(mov.monto);
     return acc;
   }, 0);
+  
+  const totalFinalAcumulado = ventasHistoricasTotal + totalMovimientosHistoricos;
 
-  const totalFinalCaja = (cajaData?.total || 0) + totalMovimientos;
+  // 2. Movimientos solo del día seleccionado (Para el resumen visual)
+  const totalMovimientosDelDia = movimientos.reduce((acc, mov) => {
+    if (mov.tipoMovimiento === "ingreso") return acc + Number(mov.monto);
+    if (mov.tipoMovimiento === "gasto" || mov.tipoMovimiento === "retiro") return acc - Number(mov.monto);
+    return acc;
+  }, 0);
   // ----------------------------------------------------------------------
 
   if (loading && !cajaData) {
@@ -227,12 +260,12 @@ const Caja = () => {
       
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4} flexWrap="wrap" gap={2}>
         <Typography variant="h4" fontWeight="bold" sx={{ color: "#1565c0" }}>
-          Caja Diaria
+          Caja
         </Typography>
         <Box display="flex" gap={2}>
           <TextField
             type="date"
-            label="Día a consultar"
+            label="Fecha Seleccionada"
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
             InputLabelProps={{ shrink: true }}
@@ -252,52 +285,55 @@ const Caja = () => {
         <Box flex={{ xs: "1 1 auto", md: "0 0 40%" }}>
           <Card elevation={3} sx={{ borderRadius: 3, backgroundColor: isAdmin ? "#f8f9fa" : "#e3f2fd", height: "100%" }}>
             <CardContent>
+              {/* BLOQUE GLOBAL */}
               <Typography variant="h6" gutterBottom color="textSecondary">
-                Balance Final de Caja
+                Balance Total Acumulado
               </Typography>
-              
-              {/* Nuevo número gigante que refleja VENTAS + MOVIMIENTOS */}
-              <Typography variant="h3" fontWeight="bold" sx={{ color: totalFinalCaja >= 0 ? "#2e7d32" : "#d32f2f" }}>
-                ${totalFinalCaja.toFixed(2)}
+              <Typography variant="h3" fontWeight="bold" sx={{ color: totalFinalAcumulado >= 0 ? "#2e7d32" : "#d32f2f" }}>
+                ${totalFinalAcumulado.toFixed(2)}
               </Typography>
               <Typography variant="body2" color="textSecondary" mb={2}>
-                Total en caja (Ventas {totalMovimientos < 0 ? "-" : "+"} Movimientos)
+                Ventas históricas {totalMovimientosHistoricos < 0 ? "-" : "+"} Movimientos Acumulados
               </Typography>
 
               <Divider sx={{ my: 2 }} />
 
-              {/* Desglose visual para el usuario */}
+              {/* BLOQUE DIARIO */}
+              <Typography variant="subtitle2" color="primary" fontWeight="bold" mb={1} textTransform="uppercase">
+                Resumen del Día ({fecha})
+              </Typography>
               <Box display="flex" justifyContent="space-between" mb={1}>
-                <Typography variant="body2">Total Ventas ({cajaData?.cantidad || 0} art):</Typography>
+                <Typography variant="body2">Ventas del Día ({cajaData?.cantidad || 0} art):</Typography>
                 <Typography fontWeight="bold">${cajaData?.total.toFixed(2) || "0.00"}</Typography>
               </Box>
               <Box display="flex" justifyContent="space-between" mb={1}>
-                <Typography variant="body2">Impacto Movimientos:</Typography>
-                <Typography fontWeight="bold" sx={{ color: totalMovimientos >= 0 ? "#2e7d32" : "#d32f2f" }}>
-                  {totalMovimientos >= 0 ? "+" : ""}${totalMovimientos.toFixed(2)}
+                <Typography variant="body2">Impacto Movimientos del Día:</Typography>
+                <Typography fontWeight="bold" sx={{ color: totalMovimientosDelDia >= 0 ? "#2e7d32" : "#d32f2f" }}>
+                  {totalMovimientosDelDia >= 0 ? "+" : ""}${totalMovimientosDelDia.toFixed(2)}
                 </Typography>
               </Box>
 
               {isAdmin && (
                 <>
                   <Divider sx={{ my: 2 }} />
+                  <Typography variant="caption" color="textSecondary" display="block" mb={1}>Detalle Administrativo Diario:</Typography>
                   <Box display="flex" justifyContent="space-between" mb={1}>
-                    <Typography variant="body1">Celulares:</Typography>
+                    <Typography variant="body2">Celulares:</Typography>
                     <Typography fontWeight="bold">${cajaData?.celulares?.total.toFixed(2) || "0.00"}</Typography>
                   </Box>
                   <Box display="flex" justifyContent="space-between" mb={1}>
-                    <Typography variant="body1">Accesorios:</Typography>
+                    <Typography variant="body2">Accesorios:</Typography>
                     <Typography fontWeight="bold">${cajaData?.accesorios?.total.toFixed(2) || "0.00"}</Typography>
                   </Box>
                   <Divider sx={{ my: 2 }} />
                   <Box display="flex" justifyContent="space-between" mb={1}>
-                    <Typography variant="body1">Efectivo Físico (Neto):</Typography>
+                    <Typography variant="body2">Efectivo Físico (Neto Día):</Typography>
                     <Typography fontWeight="bold" sx={{ color: "#1565c0" }}>
                       ${cajaData?.totalNeto.toFixed(2) || "0.00"}
                     </Typography>
                   </Box>
                   <Box display="flex" justifyContent="space-between" mb={1}>
-                    <Typography variant="body1">Ganancia Real:</Typography>
+                    <Typography variant="body2">Ganancia Real (Día):</Typography>
                     <Typography fontWeight="bold" sx={{ color: "#d81b60" }}>
                       ${cajaData?.ganancia?.toFixed(2) || "0.00"}
                     </Typography>
@@ -313,7 +349,7 @@ const Caja = () => {
           <Card elevation={3} sx={{ borderRadius: 3, height: "100%" }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Registrar Movimiento
+                Registrar Movimiento en la fecha ({fecha})
               </Typography>
               
               <Box display="grid" gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }} gap={2} mb={2}>
@@ -358,7 +394,7 @@ const Caja = () => {
         <Card elevation={3} sx={{ borderRadius: 3 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom sx={{ color: "#2e7d32" }}>
-              Ventas del Día
+              Ventas del Día ({fecha})
             </Typography>
             {!cajaData?.ventas || cajaData.ventas.length === 0 ? (
               <Typography color="textSecondary">No hay ventas registradas en esta fecha.</Typography>
@@ -408,7 +444,7 @@ const Caja = () => {
         <Card elevation={3} sx={{ borderRadius: 3 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom color="textSecondary">
-              Movimientos del Día
+              Movimientos del Día ({fecha})
             </Typography>
             {movimientos.length === 0 ? (
               <Typography color="textSecondary">No hay movimientos registrados en esta fecha.</Typography>
