@@ -105,11 +105,11 @@ const Home: React.FC = () => {
       >
         <SidebarButton text="Agregar Venta" onClick={handleAgregarVenta} />
         <SidebarButton text="Caja Diaria/Mensual" onClick={handleCaja} color="#ff9800" />
+        <SidebarButton text="Administración de Ventas" onClick={handleAdminVentas} color="#f44336" />
         {isAdmin && (
           <>
             <SidebarButton text="Ver Notas" onClick={handleVerNotas} color="#9c27b0" />
             <SidebarButton text="Agregar Stock" onClick={handleAgregarStock} color="#4caf50" />
-            <SidebarButton text="Administración de Ventas" onClick={handleAdminVentas} color="#f44336" />
             <SidebarButton text="Control de Stock" onClick={handleControlStock} color="#03a9f4" />
             <SidebarButton text="Agregar Reparación" onClick={handleAgregarReparacion} color="#9e9e9e" />
             <SidebarButton text="Administrar Proveedores" onClick={handleProveedores} color="#795548" /> {/* 🔹 Nuevo botón */}

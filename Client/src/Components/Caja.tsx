@@ -80,9 +80,8 @@ const Caja = () => {
   const [cajaData, setCajaData] = useState<ResCaja | null>(null);
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   
-  // NUEVOS ESTADOS: Para manejar los datos globales (Acumulados)
-  const [movimientosGlobales, setMovimientosGlobales] = useState<Movimiento[]>([]);
-  const [ventasHistoricasTotal, setVentasHistoricasTotal] = useState<number>(0);
+  // ESTADO NUEVO: Para guardar el balance real que viene del backend
+  const [balanceAcumulado, setBalanceAcumulado] = useState<number>(0);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,35 +112,25 @@ const Caja = () => {
 
     setLoading(true);
     try {
-      // 1. Obtenemos las ventas DEL DÍA seleccionado (para la tabla y desglose diario)
+      // 1. Datos diarios de ventas (el resumen del día)
       const resCaja = await axios.get<ResCaja>(`${apiUrl}/ventas/caja/consulta`, {
         params: { tipo: "diaria", metodoPago, fecha },
         headers: { Authorization: `Bearer ${token}` },
       });
       setCajaData(resCaja.data);
 
-      // 2. Obtenemos el histórico de ventas (Para el balance acumulado)
-      try {
-        const resCajaHist = await axios.get<ResCaja>(`${apiUrl}/ventas/caja/consulta`, {
-          params: { tipo: "historico", metodoPago: "Todos" }, // Asegúrate que tu backend lo soporte
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setVentasHistoricasTotal(resCajaHist.data.total || 0);
-      } catch (err) {
-        console.warn("No se pudo obtener el histórico de ventas. Revisa el endpoint.");
-      }
-
-      // 3. Obtenemos TODOS los movimientos
+      // 2. Movimientos del día
       const resMov = await axios.get<Movimiento[]>(`${apiUrl}/caja/movimientos`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
-      // Guardamos todos los movimientos para el balance general
-      setMovimientosGlobales(resMov.data);
-      
-      // Filtramos solo los del día para la tabla inferior
       const movimientosDelDia = resMov.data.filter((mov) => mov.fecha.startsWith(fecha));
       setMovimientos(movimientosDelDia);
+
+      // 3. BALANCE ACUMULADO REAL (Usando la ruta que ya tienes creada en tu backend)
+      const resBalance = await axios.get<{balance: number}>(`${apiUrl}/caja/movimientos/balance`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setBalanceAcumulado(resBalance.data.balance);
       
       setError(null);
     } catch (err: any) {
@@ -193,8 +182,7 @@ const Caja = () => {
           metodoPago: metodoPagoMovimiento,
           descripcion: descripcionMovimiento,
           usuarioId: userId,
-          // Añadimos T12:00:00.000Z para forzar que el backend no cambie de día por zonas horarias
-          fecha: `${fecha}T12:00:00.000Z`, 
+          fecha: `${fecha}T12:00:00.000Z`, // Se envía la fecha seleccionada para el gasto retroactivo
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -227,25 +215,6 @@ const Caja = () => {
       setConfirmOpen(false);
     }
   };
-
-  // --- SOLUCIÓN: Cálculos Separados (Global vs Diario) ---
-  
-  // 1. Balance Acumulado (Histórico de toda la vida)
-  const totalMovimientosHistoricos = movimientosGlobales.reduce((acc, mov) => {
-    if (mov.tipoMovimiento === "ingreso") return acc + Number(mov.monto);
-    if (mov.tipoMovimiento === "gasto" || mov.tipoMovimiento === "retiro") return acc - Number(mov.monto);
-    return acc;
-  }, 0);
-  
-  const totalFinalAcumulado = ventasHistoricasTotal + totalMovimientosHistoricos;
-
-  // 2. Movimientos solo del día seleccionado (Para el resumen visual)
-  const totalMovimientosDelDia = movimientos.reduce((acc, mov) => {
-    if (mov.tipoMovimiento === "ingreso") return acc + Number(mov.monto);
-    if (mov.tipoMovimiento === "gasto" || mov.tipoMovimiento === "retiro") return acc - Number(mov.monto);
-    return acc;
-  }, 0);
-  // ----------------------------------------------------------------------
 
   if (loading && !cajaData) {
     return (
@@ -281,42 +250,29 @@ const Caja = () => {
 
       <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={3} mb={3}>
         
-        {/* COLUMNA IZQUIERDA: Totales Actualizados */}
+        {/* COLUMNA IZQUIERDA: Balance Total */}
         <Box flex={{ xs: "1 1 auto", md: "0 0 40%" }}>
           <Card elevation={3} sx={{ borderRadius: 3, backgroundColor: isAdmin ? "#f8f9fa" : "#e3f2fd", height: "100%" }}>
             <CardContent>
-              {/* BLOQUE GLOBAL */}
               <Typography variant="h6" gutterBottom color="textSecondary">
                 Balance Total Acumulado
               </Typography>
-              <Typography variant="h3" fontWeight="bold" sx={{ color: totalFinalAcumulado >= 0 ? "#2e7d32" : "#d32f2f" }}>
-                ${totalFinalAcumulado.toFixed(2)}
+              
+              {/* Aquí usamos el dato real que calculó tu backend (Ventas + Ingresos - Egresos) */}
+              <Typography variant="h3" fontWeight="bold" sx={{ color: balanceAcumulado >= 0 ? "#2e7d32" : "#d32f2f" }}>
+                ${balanceAcumulado.toFixed(2)}
               </Typography>
+              
               <Typography variant="body2" color="textSecondary" mb={2}>
-                Ventas históricas {totalMovimientosHistoricos < 0 ? "-" : "+"} Movimientos Acumulados
+                Todas las ventas - Retiros/Gastos
               </Typography>
-
-              <Divider sx={{ my: 2 }} />
-
-              {/* BLOQUE DIARIO */}
-              <Typography variant="subtitle2" color="primary" fontWeight="bold" mb={1} textTransform="uppercase">
-                Resumen del Día ({fecha})
-              </Typography>
-              <Box display="flex" justifyContent="space-between" mb={1}>
-                <Typography variant="body2">Ventas del Día ({cajaData?.cantidad || 0} art):</Typography>
-                <Typography fontWeight="bold">${cajaData?.total.toFixed(2) || "0.00"}</Typography>
-              </Box>
-              <Box display="flex" justifyContent="space-between" mb={1}>
-                <Typography variant="body2">Impacto Movimientos del Día:</Typography>
-                <Typography fontWeight="bold" sx={{ color: totalMovimientosDelDia >= 0 ? "#2e7d32" : "#d32f2f" }}>
-                  {totalMovimientosDelDia >= 0 ? "+" : ""}${totalMovimientosDelDia.toFixed(2)}
-                </Typography>
-              </Box>
 
               {isAdmin && (
                 <>
                   <Divider sx={{ my: 2 }} />
-                  <Typography variant="caption" color="textSecondary" display="block" mb={1}>Detalle Administrativo Diario:</Typography>
+                  <Typography variant="caption" color="textSecondary" display="block" mb={1}>
+                    Detalle Administrativo (Día {fecha}):
+                  </Typography>
                   <Box display="flex" justifyContent="space-between" mb={1}>
                     <Typography variant="body2">Celulares:</Typography>
                     <Typography fontWeight="bold">${cajaData?.celulares?.total.toFixed(2) || "0.00"}</Typography>
@@ -389,7 +345,7 @@ const Caja = () => {
         </Box>
       </Box>
 
-      {/* NUEVA TABLA: DETALLE DE VENTAS DEL DÍA */}
+      {/* TABLA: DETALLE DE VENTAS DEL DÍA */}
       <Box mb={3}>
         <Card elevation={3} sx={{ borderRadius: 3 }}>
           <CardContent>
